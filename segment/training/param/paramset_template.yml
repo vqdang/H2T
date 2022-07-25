@@ -1,0 +1,10 @@
+
+
+optimizer_kwargs:
+  'lr' : 1.0e-4
+  'betas' : [0.9, 0.999]
+  'weight_decay' : 0.0
+
+loader_kwargs:
+  train: { 'batch_size' : 4, 'nr_procs' : 8}
+  infer: { 'batch_size' : 4, 'nr_procs' : 8}
