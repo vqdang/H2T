@@ -625,12 +625,14 @@ def difference_filename(listA, listB):
     return sublistA.tolist()
 
 
-def intersection_filename(listA, listB):
+def intersection_filename(listA, listB, return_names=False):
     """Return paths with file name exist in both A and B."""
     name_listA = [pathlib.Path(v).stem for v in listA]
     name_listB = [pathlib.Path(v).stem for v in listB]
     union_name_list = list(set(name_listA).intersection(set(name_listB)))
     union_name_list.sort()
+    if return_names:
+        return union_name_list
 
     sel_idx_list = []
     for _, name in enumerate(union_name_list):
