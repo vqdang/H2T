@@ -606,3 +606,50 @@ def convert_to_resolution(dat, resolution):
         "element-resolution": resolution,
         "elements": el_dat_,
     }
+
+
+def difference_filename(listA, listB):
+    """Return paths in A that dont have filename in B."""
+    name_listB = [pathlib.Path(v).stem for v in listB]
+    name_listB = list(set(name_listB))
+    name_listA = [pathlib.Path(v).stem for v in listA]
+    sel_idx_list = []
+    for idx, name in enumerate(name_listA):
+        try:
+            name_listB.index(name)
+        except ValueError:
+            sel_idx_list.append(idx)
+    if len(sel_idx_list) == 0:
+        return []
+    sublistA = np.array(listA)[np.array(sel_idx_list)]
+    return sublistA.tolist()
+
+
+def intersection_filename(listA, listB, return_names=False):
+    """Return paths with file name exist in both A and B."""
+    name_listA = [pathlib.Path(v).stem for v in listA]
+    name_listB = [pathlib.Path(v).stem for v in listB]
+    union_name_list = list(set(name_listA).intersection(set(name_listB)))
+    union_name_list.sort()
+    if return_names:
+        return union_name_list
+
+    sel_idx_list = []
+    for _, name in enumerate(union_name_list):
+        try:
+            sel_idx_list.append(name_listA.index(name))
+        except ValueError:
+            pass
+    if len(sel_idx_list) == 0:
+        return [], []
+    sublistA = np.array(listA)[np.array(sel_idx_list)]
+
+    sel_idx_list = []
+    for _, name in enumerate(union_name_list):
+        try:
+            sel_idx_list.append(name_listB.index(name))
+        except ValueError:
+            pass
+    sublistB = np.array(listB)[np.array(sel_idx_list)]
+
+    return sublistA.tolist(), sublistB.tolist()
