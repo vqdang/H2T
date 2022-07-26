@@ -12,18 +12,28 @@ import torch
 import torch.nn as nn
 
 sys.path.append(os.environ["TIATOOLBOX"])
-from tiatoolbox.models import (IOSegmentorConfig, SemanticSegmentor,
-                               WSIStreamDataset)
+from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor, WSIStreamDataset
 from tiatoolbox.models.abc import ModelABC
-from tiatoolbox.models.engine.semantic_segmentor import (DeepFeatureExtractor,
-                                                         IOSegmentorConfig)
+from tiatoolbox.models.engine.semantic_segmentor import (
+    DeepFeatureExtractor,
+    IOSegmentorConfig,
+)
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
 from misc.reader import get_reader
-from misc.utils import (convert_pytorch_checkpoint, difference_filename,
-                        dispatch_processing, imread, imwrite,
-                        intersection_filename, log_info, mkdir, recur_find_ext,
-                        rm_n_mkdir, rmdir)
+from misc.utils import (
+    convert_pytorch_checkpoint,
+    difference_filename,
+    dispatch_processing,
+    imread,
+    imwrite,
+    intersection_filename,
+    log_info,
+    mkdir,
+    recur_find_ext,
+    rm_n_mkdir,
+    rmdir,
+)
 
 
 class XReader(WSIStreamDataset):
@@ -70,6 +80,7 @@ def get_model_class(arch_name):
 
     if arch_name == "resnet50":
         from models.backbone import ResNetExt
+
         BackboneModel = ResNetExt.resnet50
     else:
         assert False, f"Unknown class architecture with alias `{arch_name}`."
@@ -141,19 +152,14 @@ def retrieve_input_files(
 
     shared_names = intersection_filename(wsi_paths, msk_paths, return_names=True)
 
-    end_idx = (
-        args.END_IDX if args.END_IDX <= len(shared_names) else len(shared_names)
-    )
+    end_idx = args.END_IDX if args.END_IDX <= len(shared_names) else len(shared_names)
 
     shared_names = shared_names[start_idx:end_idx]
 
     existing_output_paths = recur_find_ext(save_dir, [".features.npy"])
     # need to fake name into paths
     remanining_names = [pathlib.Path(f"temp/{v}.features.npy") for v in shared_names]
-    remanining_names = difference_filename(
-        remanining_names,
-        existing_output_paths
-    )
+    remanining_names = difference_filename(remanining_names, existing_output_paths)
     remanining_names = [str(pathlib.Path(v).stem) for v in remanining_names]
     remanining_names = [v.replace(".features", "") for v in remanining_names]
 
@@ -178,14 +184,29 @@ if __name__ == "__main__":
     parser.add_argument("--PRETRAINED", type=str)
     parser.add_argument("--WSI_DIR", type=str, default="breast")
     parser.add_argument("--MSK_DIR", type=str, default="fcn-resnet")
-    parser.add_argument("--JOB_ID", type=int, default=0)
+    parser.add_argument("--SAVE_DIR", type=str)
+    parser.add_argument("--JOB_ID", type=str, default=0)
     parser.add_argument("--START_IDX", type=int, default=0)
     parser.add_argument("--END_IDX", type=int, default=2)
     args = parser.parse_args()
+    print(args)
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     num_gpu = len(args.gpu.split(","))
     PWD = os.environ["PWD"]
+
+    # * LSF debug
+    # args.PRETRAINED = "/root/local_storage/storage_0/workspace/h2t/experiments/local/pretrained/resnet50-swav.tar"
+    # args.WSI_DIR = "/root/dgx_workspace/h2t/dataset/tcga//breast/ffpe/"
+    # args.MSK_DIR = (
+    #     "/root/dgx_workspace/h2t/segment/fcn-convnext/tcga//breast/ffpe/masks/"
+    # )
+    # args.SAVE_DIR = "/root/dgx_workspace/h2t/features/swav/tcga//breast/ffpe/"
+    # args.JOB_ID = 0
+    # args.START_IDX = 0
+    # args.END_IDX = 100
+    # rm_n_mkdir(args.SAVE_DIR)
+    # *
 
     # *
     NETWORK_DATA = False
@@ -193,8 +214,8 @@ if __name__ == "__main__":
     PRETRAINED = args.PRETRAINED
     WSI_DIR = args.WSI_DIR
     MSK_DIR = args.MSK_DIR
-    CACHE_DIR = ""
-    SAVE_DIR = ""
+    CACHE_DIR = f"/root/dgx_workspace/h2t/cache/{args.JOB_ID}/"
+    SAVE_DIR = args.SAVE_DIR
     # *
 
     # *
@@ -220,12 +241,14 @@ if __name__ == "__main__":
     PRETRAINED = torch.load(PRETRAINED, map_location="cpu")
     PRETRAINED = convert_pytorch_checkpoint(PRETRAINED)
     model = get_model_class(ARCH)()
-    missing_weights, unexpected_weights = model.backbone.load_state_dict(PRETRAINED, strict=False)
+    missing_weights, unexpected_weights = model.backbone.load_state_dict(
+        PRETRAINED, strict=False
+    )
     log_info(f"Missing Keys: {missing_weights}")
     log_info(f"Unexpected Keys: {unexpected_weights}")
 
     segmentor = DeepFeatureExtractor(
-        model=model, num_loader_workers=16, batch_size=32 * num_gpu
+        model=model, num_loader_workers=16, batch_size=256 * num_gpu
     )
     ioconfig = IOSegmentorConfig(
         input_resolutions=[
@@ -260,18 +283,18 @@ if __name__ == "__main__":
             etime = time.perf_counter()
             print(f"Copying to local storage: {etime - stime}")
 
-        rmdir(f'{cache_dir}/')
+        rmdir(f"{cache_dir}/")
         output_list = segmentor.predict(
             [cache_wsi_path],
             [msk_path],
-            mode='wsi',
+            mode="wsi",
             on_gpu=True,
             ioconfig=ioconfig,
             crash_on_exception=False,
-            save_dir=f'{cache_dir}/'
+            save_dir=f"{cache_dir}/",
         )
 
-        output_file = f'{cache_dir}/file_map.dat'
+        output_file = f"{cache_dir}/file_map.dat"
         if not os.path.exists(output_file):
             continue
         output_info = joblib.load(output_file)
@@ -279,10 +302,10 @@ if __name__ == "__main__":
         mkdir(f"{SAVE_DIR}/")
         for input_file, output_root in output_info:
             file_name = pathlib.Path(input_file).stem
-            src_path = f'{output_root}.position.npy'
-            dst_path = f'{SAVE_DIR}/{file_name}.position.npy'
+            src_path = f"{output_root}.position.npy"
+            dst_path = f"{SAVE_DIR}/{file_name}.position.npy"
             shutil.copyfile(src_path, dst_path)
-            src_path = f'{output_root}.features.0.npy'
-            dst_path = f'{SAVE_DIR}/{file_name}.features.npy'
+            src_path = f"{output_root}.features.0.npy"
+            dst_path = f"{SAVE_DIR}/{file_name}.features.npy"
             shutil.copyfile(src_path, dst_path)
-        rmdir(f'{cache_dir}/')
+        rmdir(f"{cache_dir}/")
