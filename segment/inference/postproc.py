@@ -7,6 +7,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage import morphology
+from skimage.filters import threshold_otsu
 from tqdm import tqdm
 
 sys.path.append(os.environ["TIATOOLBOX"])
@@ -15,7 +16,7 @@ import matplotlib.pyplot as plt
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 from misc.reader import get_reader
-from misc.utils import imwrite, mkdir, recur_find_ext, dispatch_processing
+from misc.utils import imwrite, mkdir, recur_find_ext, dispatch_processing, rm_n_mkdir
 
 
 def process_tissue(
@@ -25,7 +26,7 @@ def process_tissue(
     threshold=0.5,
     overlaid_path=None,
     overlaid_mask=True,
-    resolution={"units": "mpp", "resolution": 8.0},
+    resolution={"units": "mpp", "resolution": 4.0},
 ):
     # for lazy overlaying
     wsi_reader = get_reader(wsi_path)
@@ -36,20 +37,21 @@ def process_tissue(
     pred_reader.info = wsi_reader.info
     thumb_pred = pred_reader.slide_thumbnail(**resolution)[..., 1]
 
+    thumb_img_gray = cv2.cvtColor(thumb_img, cv2.COLOR_RGB2GRAY)
+    thumb_otsu = thumb_img_gray > threshold_otsu(thumb_img_gray)
+    thumb_otsu = morphology.binary_erosion(thumb_otsu)
+    thumb_otsu = morphology.binary_erosion(thumb_otsu)
+    thumb_otsu = morphology.remove_small_objects(
+        thumb_otsu, min_size=32 * 32, connectivity=2
+    )
+
     thumb_pred_ = thumb_pred > threshold
-    # to lessen the boundary artifact when tiling prediction
-    thumb_pred_ = cv2.GaussianBlur(
-        thumb_pred_.astype(np.uint8),
-        (17, 17),
-        sigmaX=0,
-        sigmaY=0,
-        borderType=cv2.BORDER_REPLICATE,
-    )
+    thumb_pred_ = thumb_pred_ & (~thumb_otsu)
+
+    thumb_pred_ = thumb_pred_.astype(np.uint8)
+    thumb_pred_ = morphology.binary_erosion(thumb_pred_)
     thumb_pred_ = morphology.remove_small_objects(
-        thumb_pred_.astype(np.bool), min_size=32 * 32, connectivity=2
-    )
-    thumb_pred_ = morphology.remove_small_holes(
-        thumb_pred_.astype(np.bool), area_threshold=256 * 256
+        thumb_pred_, min_size=512 * 512, connectivity=2
     )
     thumb_pred_ = thumb_pred_.astype(np.uint8)
 
@@ -84,13 +86,18 @@ if __name__ == "__main__":
     # SAVE_MASK_DIR = "/mnt/storage_0/workspace/stampede/experiments/segment/new_set/Ki67/2022.07.01_ARM_A/normal-tumor/processed/"
     # SAVE_OVERLAID_DIR = "/mnt/storage_0/workspace/stampede/experiments/segment/new_set/Ki67/2022.07.01_ARM_A/normal-tumor/overlaid/"
     # *
+    # WSI_DIR='/root/dgx_workspace/h2t/dataset/tcga//breast/ffpe-he/'
+    # NPY_DIR='/root/dgx_workspace/h2t/segment//fcn-convnext/tcga/breast/ffpe/raw/'
+    # SAVE_MASK_DIR='/root/local_storage/storage_0/workspace/h2t/experiments/local/segment//fcn-convnext/tcga/breast/ffpe/masks/'
+    # SAVE_OVERLAID_DIR='/root/local_storage/storage_0/workspace/h2t/experiments/local/segment//fcn-convnext/tcga/breast/ffpe/overlaid/'
+    # *
     WSI_DIR = args.WSI_DIR
     NPY_DIR = args.NPY_DIR
     SAVE_MASK_DIR = args.SAVE_MASK_DIR
     SAVE_OVERLAID_DIR = args.SAVE_OVERLAID_DIR
 
-    mkdir(SAVE_MASK_DIR)
-    mkdir(SAVE_OVERLAID_DIR)
+    rm_n_mkdir(SAVE_MASK_DIR)
+    rm_n_mkdir(SAVE_OVERLAID_DIR)
 
     wsi_exts = [".svs", ".tif", ".ndpi", ".png"]
     npy_paths = recur_find_ext(f"{NPY_DIR}", [".npy"])
