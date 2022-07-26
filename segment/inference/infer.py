@@ -279,4 +279,3 @@ if __name__ == "__main__":
             dst_path = f"{SAVE_ROOT_DIR}/raw/{file_name}.npy"
             shutil.copyfile(src_path, dst_path)
         rmdir(f"{cache_dir}/")
-        break
