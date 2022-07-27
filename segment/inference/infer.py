@@ -64,7 +64,6 @@ class XPredictor(SemanticSegmentor):
 
 def get_model_class(arch_name):
     """Instantiate a new class definition.
-
     This will instantiate a new class definition that is a composite of
     class `ModelABC` in `tiatoolbox` and our custom class architecture
     aliased with the input `name`.
