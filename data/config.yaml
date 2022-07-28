@@ -1,0 +1,88 @@
+
+"normal-tumor-tcga-cptac":   
+  train-valid:
+    - identifier: "tcga/lung/ffpe/lusc"
+      labels:
+        "normal": 0
+        'Basaloid squamous cell carcinoma': 1
+        'Papillary squamous cell carcinoma': 1
+        'Squamous cell carcinoma, NOS': 1
+        'Squamous cell carcinoma, keratinizing, NOS': 1
+        'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 1
+        'Squamous cell carcinoma, small cell, nonkeratinizing': 1
+    - identifier: "tcga/lung/frozen/lusc"
+      labels:
+        "normal": 0
+        'Basaloid squamous cell carcinoma': 1
+        'Papillary squamous cell carcinoma': 1
+        'Squamous cell carcinoma, NOS': 1
+        'Squamous cell carcinoma, keratinizing, NOS': 1
+        'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 1
+        'Squamous cell carcinoma, small cell, nonkeratinizing': 1
+    - identifier: "tcga/lung/ffpe/luad"
+      labels:
+        "normal": 0
+        'Acinar cell carcinoma': 1
+        'Adenocarcinoma with mixed subtypes': 1
+        'Adenocarcinoma, NOS': 1
+        'Bronchio-alveolar carcinoma, mucinous': 1
+        'Bronchiolo-alveolar adenocarcinoma, NOS': 1
+        'Bronchiolo-alveolar carcinoma, non-mucinous': 1
+        'Clear cell adenocarcinoma, NOS': 1
+        'Micropapillary carcinoma, NOS': 1
+        'Mucinous adenocarcinoma': 1
+        'Papillary adenocarcinoma, NOS': 1
+        'Signet ring cell carcinoma': 1
+        'Solid carcinoma, NOS': 1
+    - identifier: "tcga/lung/frozen/luad"
+      labels:
+        "normal": 0
+        'Acinar cell carcinoma': 1
+        'Adenocarcinoma with mixed subtypes': 1
+        'Adenocarcinoma, NOS': 1
+        'Bronchio-alveolar carcinoma, mucinous': 1
+        'Bronchiolo-alveolar adenocarcinoma, NOS': 1
+        'Bronchiolo-alveolar carcinoma, non-mucinous': 1
+        'Clear cell adenocarcinoma, NOS': 1
+        'Micropapillary carcinoma, NOS': 1
+        'Mucinous adenocarcinoma': 1
+        'Papillary adenocarcinoma, NOS': 1
+        'Signet ring cell carcinoma': 1
+        'Solid carcinoma, NOS': 1        
+  test:
+    - identifier: "cptac/lusc"
+      labels:
+        "normal": 0
+        "blood": 0
+        "tumor": 1
+    - identifier: "cptac/luad"
+      labels:
+        "normal": 0
+        "blood": 0
+        "tumor": 1
+
+# "normal-tumor-cptac-tcga":
+#   train-valid:
+#     {identifier: "", label: ""}
+#   test:
+#     {identifier: "", label: ""}
+
+# "luad-lusc-cptac-tcga":
+#   train-valid:
+#     {identifier: "", label: ""}
+#   test:
+#     {identifier: "", label: ""}
+
+# "luad-lusc-cptac-tcga":
+#   train-valid:
+#     {identifier: "", label: ""}
+#   test:
+#     {identifier: "", label: ""}
+
+# "breast-tcga":
+#   train-valid:
+#     {identifier: "", label: ""}
+
+# "kidney-tcga":
+#   train-valid:
+#     {identifier: "", label: ""}
