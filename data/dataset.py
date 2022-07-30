@@ -84,8 +84,12 @@ class CPTAC(object):
         labels = [
             "normal",
             "blood",
-            "tumor",
         ]
+        if "lscc" in clinical_file:
+            labels.append("Squamous cell carcinoma")
+        elif "luad" in clinical_file:
+            labels.append("adenocarcinoma")
+
         output = []
         for v in slide_names:
             code = pathlib.Path(v).stem

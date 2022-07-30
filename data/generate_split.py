@@ -137,22 +137,3 @@ config = load_yaml(f"{PWD}/data/config.yaml")
 #     break
 
 # %%
-split_code = "[luad-lusc]_train=tcga_test=cptac"
-old_split_root = "/mnt/storage_0/workspace/h2t/data/splits/"
-old_splits = joblib.load(f"{old_split_root}/{split_code}.dat")
-
-new_splits = per_dataset_stratified_split(config[split_code], dataset_sample_info)
-# %%
-for split_idx in range(num_splits):
-    old_split = old_splits[split_idx][1]
-    new_split = new_splits[split_idx]
-
-    old_ids = [v[0][1] for v in old_split["tcga-train"]]
-    new_ids = [v[0][1] for v in new_split["train"]]
-    flags = [v in old_ids for v in new_ids]
-    print(len(old_ids))
-    print(len(new_ids))
-    print(np.sum(flags))
-    print("=")
-
-# %%
