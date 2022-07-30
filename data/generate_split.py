@@ -62,7 +62,11 @@ def per_dataset_stratified_split(config, dataset_sample_info):
             label_mapping = subset["labels"]
             label_mapping = {k.lower(): int(v) for k, v in label_mapping.items()}
 
-            samples = dataset_sample_info[subset["identifier"]]
+            identifier = subset["identifier"]
+            identifier = [v for v in identifier.split("/") if len(v) > 0]
+            identifier = "/".join(identifier)
+
+            samples = dataset_sample_info[identifier]
             # filter samples with labels that are not within selected
             # set out (contained as keys within `label_mapping`)
             samples = [v for v in samples if v[1] in label_mapping]
@@ -116,6 +120,17 @@ dataset_identifiers = [
     # "tcga/kidney/ffpe",
     # "tcga/kidney/frozen",
 ]
+# * To generate old splits (tcga lung), need to merge
+# * ffpe and frozen in this exact order
+# dataset_sample_info["tcga/lung/ffpe"] = (
+#     dataset_sample_info["tcga/lung/ffpe/luad"] +
+#     dataset_sample_info["tcga/lung/ffpe/lscc"]
+# )
+# dataset_sample_info["tcga/lung/frozen"] = (
+#     dataset_sample_info["tcga/lung/frozen/luad"] +
+#     dataset_sample_info["tcga/lung/frozen/lscc"]
+# )
+
 PWD = "/mnt/storage_0/workspace/h2t/"
 feature_root_dir = "/mnt/storage_0/workspace/h2t/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
 
@@ -124,38 +139,20 @@ dataset_sample_info = retrieve_dataset_slide_info(
     feature_root_dir, dataset_identifiers
 )
 
-# %%
+
+
 config = load_yaml(f"{PWD}/data/config.yaml")
 # for split_name, split_info in config.items():
 #     splits = per_dataset_stratified_split(split_info)
 #     break
-# %%
-print("here")
 
-old_subset_info = joblib.load("splits/subset_info.dat")
-old_mapping = {
-    "TCGA-LSCC": "tcga/lung/ffpe/lscc",
-    "TCGA-LSCC-Frozen": "tcga/lung/frozen/lscc",
-    "TCGA-LUAD": "tcga/lung/ffpe/luad",
-    "TCGA-LUAD-Frozen": "tcga/lung/frozen/luad",
-    "CPTAC-LUAD": "cptac/lung/luad",
-    "CPTAC-LSCC": "cptac/lung/lscc",
-}
-for k, v in old_mapping.items():
-    # print(len(old_subset_info[k]))
-    # print(len(dataset_sample_info[v]))
-    flags = [
-        sample[0][1] == old_subset_info[k][i][0][1]
-        for i, sample in enumerate(old_subset_info[k])
-    ]
-    print(np.sum(flags), len(old_subset_info[k]))
 
 # %%
 split_code = "[luad-lusc]_train=tcga_test=cptac"
 old_split_root = "/mnt/storage_0/workspace/h2t/data/splits/"
 old_splits = joblib.load(f"{old_split_root}/{split_code}.dat")
 
-new_splits = per_dataset_stratified_split(config[split_code])
+new_splits = per_dataset_stratified_split(config[split_code], dataset_sample_info)
 # %%
 for split_idx in range(num_splits):
     old_split = old_splits[split_idx][1]

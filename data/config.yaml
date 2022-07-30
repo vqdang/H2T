@@ -126,24 +126,9 @@
 
 "[luad-lusc]_train=tcga_test=cptac":   
   train-valid:
-    - identifier: "tcga/lung/ffpe/lscc"
+    - identifier: "tcga/lung/ffpe"
       labels:
-        'Basaloid squamous cell carcinoma': 0
-        'Papillary squamous cell carcinoma': 0
-        'Squamous cell carcinoma, NOS': 0
-        'Squamous cell carcinoma, keratinizing, NOS': 0
-        'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 0
-        'Squamous cell carcinoma, small cell, nonkeratinizing': 0
-    - identifier: "tcga/lung/frozen/lscc"
-      labels:
-        'Basaloid squamous cell carcinoma': 0
-        'Papillary squamous cell carcinoma': 0
-        'Squamous cell carcinoma, NOS': 0
-        'Squamous cell carcinoma, keratinizing, NOS': 0
-        'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 0
-        'Squamous cell carcinoma, small cell, nonkeratinizing': 0
-    - identifier: "tcga/lung/ffpe/luad"
-      labels:
+        # LUAD
         'Acinar cell carcinoma': 1
         'Adenocarcinoma with mixed subtypes': 1
         'Adenocarcinoma, NOS': 1
@@ -155,9 +140,17 @@
         'Mucinous adenocarcinoma': 1
         'Papillary adenocarcinoma, NOS': 1
         'Signet ring cell carcinoma': 1
-        'Solid carcinoma, NOS': 1
-    - identifier: "tcga/lung/frozen/luad"
+        'Solid carcinoma, NOS': 1     
+        # LUSC
+        'Basaloid squamous cell carcinoma': 0
+        'Papillary squamous cell carcinoma': 0
+        'Squamous cell carcinoma, NOS': 0
+        'Squamous cell carcinoma, keratinizing, NOS': 0
+        'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 0
+        'Squamous cell carcinoma, small cell, nonkeratinizing': 0
+    - identifier: "tcga/lung/frozen"
       labels:
+        # LUAD
         'Acinar cell carcinoma': 1
         'Adenocarcinoma with mixed subtypes': 1
         'Adenocarcinoma, NOS': 1
@@ -169,7 +162,14 @@
         'Mucinous adenocarcinoma': 1
         'Papillary adenocarcinoma, NOS': 1
         'Signet ring cell carcinoma': 1
-        'Solid carcinoma, NOS': 1
+        'Solid carcinoma, NOS': 1     
+        # LUSC
+        'Basaloid squamous cell carcinoma': 0
+        'Papillary squamous cell carcinoma': 0
+        'Squamous cell carcinoma, NOS': 0
+        'Squamous cell carcinoma, keratinizing, NOS': 0
+        'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 0
+        'Squamous cell carcinoma, small cell, nonkeratinizing': 0      
   test:
     - identifier: "cptac/lung/lscc"
       labels:
