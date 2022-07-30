@@ -55,7 +55,31 @@ def retrieve_dataset_slide_info(feature_root_dir, dataset_identifiers):
     return sample_info_per_dataset
 
 
-def per_dataset_stratified_split(config, dataset_sample_info):
+def per_dataset_stratified_split(
+    config: dict, dataset_sample_info: dict, num_splits: int = 5
+):
+    """Groupping and splitting dataset stratifically at label and dataset levels.
+
+    Args:
+        config (dict): A dictionary contains information how each dataset within
+            each split is generated (called `split dataset`). A `split dataset`
+            can be a composition of multiple dataset defined within `dataset_sample_info`,
+            For more details, check the `config.yaml`.
+
+        dataset_sample_info (dict): A dictionary contains the information about
+            the samples within each dataset which has the format
+
+            ```
+            sample: [sample_identifer: List[str], biological_label: str]
+            dataset_sample_info: {dataset_identifier: str, List[sample]}
+            ```
+
+            Here, `sample_identifier` contains the slide name and associated
+            directory structures. `dataset_identifier` can be used to
+            define composite `split dataset` in `config`.
+
+    """
+
     def retrieve_subset(subset_info, dataset_sample_info):
         all_subsets = []
         for subset in subset_info:
@@ -126,10 +150,7 @@ dataset_identifiers = [
 PWD = "/mnt/storage_0/workspace/h2t/"
 feature_root_dir = "/mnt/storage_0/workspace/h2t/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
 
-num_splits = 5
-dataset_sample_info = retrieve_dataset_slide_info(
-    feature_root_dir, dataset_identifiers
-)
+dataset_sample_info = retrieve_dataset_slide_info(feature_root_dir, dataset_identifiers)
 
 config = load_yaml(f"{PWD}/data/config.yaml")
 # for split_name, split_info in config.items():
