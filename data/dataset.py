@@ -63,24 +63,10 @@ class TCGA(object):
 
 
 class CPTAC(object):
+
     @staticmethod
-    def load(slide_dir, data_code):
-        set_info = {
-            "CPTAC-LSCC": "dataset/CPTAC-LSCC.json",
-            "CPTAC-LUAD": "dataset/CPTAC-LUAD.json",
-        }
-
-        patterning = lambda x: re.sub("([\[\]])", "[\\1]", x)
-        slide_path_list = []
-        for full_path, subdirs, files in os.walk(slide_dir):
-            for file_path in files:
-                file_ext = pathlib.Path(file_path).suffix
-                if file_ext == ".npy":
-                    slide_path_list.append(full_path + "/" + file_path)
-        slide_path_list.sort()
-        assert len(slide_path_list) != 0, "`%s` is empty" % slide_dir
-
-        with open(set_info[data_code], "r") as handle:
+    def retrieve_labels(slide_names, clinical_file):
+        with open(clinical_file, "r") as handle:
             info = json.load(handle)
 
         slide_info_list = []
@@ -95,18 +81,17 @@ class CPTAC(object):
         slide_info_list = sorted(slide_info_list, key=lambda x: x[0])
         slide_info_dict = OrderedDict(slide_info_list)
 
-        label_map = {
-            "normal": 0,
-            "blood": 0,
-            "tumor": 1,
-        }
+        labels = [
+            "normal",
+            "blood",
+            "tumor",
+        ]
         output = []
-        for v in slide_path_list:
+        for v in slide_names:
             code = pathlib.Path(v).stem
             if code in slide_info_dict:
                 vx = slide_info_dict[code]
-                if vx not in label_map:
+                if vx not in labels:
                     continue
-                output.append((v, label_map[vx]))
-        # print('%d/%d' % (len(output), len(slide_path_list)))
-        return zip(*output)
+                output.append((v, vx))
+        return output
