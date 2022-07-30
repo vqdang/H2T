@@ -62,11 +62,13 @@ def per_dataset_stratified_split(config, dataset_sample_info):
             label_mapping = subset["labels"]
             label_mapping = {k.lower(): int(v) for k, v in label_mapping.items()}
 
-            identifier = subset["identifier"]
-            identifier = [v for v in identifier.split("/") if len(v) > 0]
-            identifier = "/".join(identifier)
+            samples = []
+            for identifier in subset["identifiers"]:
+                identifier = [v for v in identifier.split("/") if len(v) > 0]
+                identifier = "/".join(identifier)
+                identifer_samples = dataset_sample_info[identifier]
+                samples.extend(identifer_samples)
 
-            samples = dataset_sample_info[identifier]
             # filter samples with labels that are not within selected
             # set out (contained as keys within `label_mapping`)
             samples = [v for v in samples if v[1] in label_mapping]
@@ -120,16 +122,6 @@ dataset_identifiers = [
     # "tcga/kidney/ffpe",
     # "tcga/kidney/frozen",
 ]
-# * To generate old splits (tcga lung), need to merge
-# * ffpe and frozen in this exact order
-# dataset_sample_info["tcga/lung/ffpe"] = (
-#     dataset_sample_info["tcga/lung/ffpe/luad"] +
-#     dataset_sample_info["tcga/lung/ffpe/lscc"]
-# )
-# dataset_sample_info["tcga/lung/frozen"] = (
-#     dataset_sample_info["tcga/lung/frozen/luad"] +
-#     dataset_sample_info["tcga/lung/frozen/lscc"]
-# )
 
 PWD = "/mnt/storage_0/workspace/h2t/"
 feature_root_dir = "/mnt/storage_0/workspace/h2t/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
@@ -139,13 +131,10 @@ dataset_sample_info = retrieve_dataset_slide_info(
     feature_root_dir, dataset_identifiers
 )
 
-
-
 config = load_yaml(f"{PWD}/data/config.yaml")
 # for split_name, split_info in config.items():
 #     splits = per_dataset_stratified_split(split_info)
 #     break
-
 
 # %%
 split_code = "[luad-lusc]_train=tcga_test=cptac"
@@ -165,4 +154,5 @@ for split_idx in range(num_splits):
     print(len(new_ids))
     print(np.sum(flags))
     print("=")
+
 # %%

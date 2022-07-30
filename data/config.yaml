@@ -126,7 +126,9 @@
 
 "[luad-lusc]_train=tcga_test=cptac":   
   train-valid:
-    - identifier: "tcga/lung/ffpe"
+    # * To generate old splits (tcga lung), need to merge
+    # * ffpe and frozen in this exact order
+    - identifiers: ["tcga/lung/ffpe/luad", "tcga/lung/ffpe/lscc"]
       labels:
         # LUAD
         'Acinar cell carcinoma': 1
@@ -148,7 +150,9 @@
         'Squamous cell carcinoma, keratinizing, NOS': 0
         'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 0
         'Squamous cell carcinoma, small cell, nonkeratinizing': 0
-    - identifier: "tcga/lung/frozen"
+    # * To generate old splits (tcga lung), need to merge
+    # * ffpe and frozen in this exact order
+    - identifiers: ["tcga/lung/frozen/luad", "tcga/lung/frozen/lscc"]
       labels:
         # LUAD
         'Acinar cell carcinoma': 1
@@ -171,9 +175,9 @@
         'Squamous cell carcinoma, large cell, nonkeratinizing, NOS': 0
         'Squamous cell carcinoma, small cell, nonkeratinizing': 0      
   test:
-    - identifier: "cptac/lung/lscc"
+    - identifiers: ["cptac/lung/lscc"]
       labels:
         "tumor": 0
-    - identifier: "cptac/lung/luad"
+    - identifiers: ["cptac/lung/luad"]
       labels:
         "tumor": 1
