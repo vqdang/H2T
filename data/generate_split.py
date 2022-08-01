@@ -162,7 +162,7 @@ feature_root_dir = "/root/dgx_workspace/h2t/features/swav/"
 
 dataset_sample_info = retrieve_dataset_slide_info(feature_root_dir, dataset_identifiers)
 
-SPLIT_CODE = "[idc-lob]_train=tcga"
+SPLIT_CODE = "[ccrcc-prcc-chrcc]_train=tcga"
 config = load_yaml(f"{PWD}/data/config.yaml")
 splits = per_dataset_stratified_split(config[SPLIT_CODE], dataset_sample_info)
 print(np.unique([v[1] for v in splits[0]["train"]], return_counts=True))

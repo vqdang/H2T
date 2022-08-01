@@ -18,38 +18,6 @@
 # - Squamous cell carcinoma, large cell, nonkeratinizing, NOS
 # - Squamous cell carcinoma, small cell, nonkeratinizing
 
-# * Available pathologic labels in TCGA Kidney
-# - Clear cell adenocarcinoma, NOS
-# - Giant cell sarcoma
-# - Papillary adenocarcinoma, NOS
-# - Renal cell carcinoma, NOS
-# - Renal cell carcinoma, chromophobe type
-# - Synovial sarcoma, spindle cell
-
-# * Available pathologic labels in TCGA Breast
-# - Adenoid cystic carcinoma
-# - Apocrine adenocarcinoma
-# - Basal cell carcinoma, NOS
-# - Carcinoma, NOS
-# - Cribriform carcinoma, NOS
-# - Infiltrating duct and lobular carcinoma
-# - Infiltrating duct carcinoma, NOS
-# - Infiltrating duct mixed with other types of carcinoma
-# - Infiltrating lobular mixed with other types of carcinoma
-# - Intraductal micropapillary carcinoma
-# - Intraductal papillary adenocarcinoma with invasion
-# - Large cell neuroendocrine carcinoma
-# - Lobular carcinoma, NOS
-# - Malignant lymphoma, large B-cell, diffuse, NOS
-# - Medullary carcinoma, NOS
-# - Metaplastic carcinoma, NOS
-# - Mucinous adenocarcinoma
-# - Paget disease and infiltrating duct carcinoma of breast
-# - Papillary carcinoma, NOS
-# - Phyllodes tumor, malignant
-# - Pleomorphic carcinoma
-# - Secretory carcinoma of breast
-# - Tubular adenocarcinoma
 
 "[normal-tumor]_train=cptac_test=tcga":
   train-valid:
@@ -281,6 +249,31 @@
         "Adenocarcinoma": 1
         "Squamous cell carcinoma": 2
 
+# * Available pathologic labels in TCGA Breast
+# - Adenoid cystic carcinoma
+# - Apocrine adenocarcinoma
+# - Basal cell carcinoma, NOS
+# - Carcinoma, NOS
+# - Cribriform carcinoma, NOS
+# - Infiltrating duct and lobular carcinoma
+# - Infiltrating duct carcinoma, NOS
+# - Infiltrating duct mixed with other types of carcinoma
+# - Infiltrating lobular mixed with other types of carcinoma
+# - Intraductal micropapillary carcinoma
+# - Intraductal papillary adenocarcinoma with invasion
+# - Large cell neuroendocrine carcinoma
+# - Lobular carcinoma, NOS
+# - Malignant lymphoma, large B-cell, diffuse, NOS
+# - Medullary carcinoma, NOS
+# - Metaplastic carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Paget disease and infiltrating duct carcinoma of breast
+# - Papillary carcinoma, NOS
+# - Phyllodes tumor, malignant
+# - Pleomorphic carcinoma
+# - Secretory carcinoma of breast
+# - Tubular adenocarcinoma
+
 "[idc-lob]_train=tcga":
   train-valid:
     - identifiers: ["tcga/breast/ffpe"]
@@ -291,3 +284,29 @@
       labels:
         "Infiltrating duct carcinoma, NOS": 0
         "Lobular carcinoma, NOS": 1
+
+# * Available pathologic labels in TCGA Kidney
+# - Clear cell adenocarcinoma, NOS
+# - Giant cell sarcoma
+# - Papillary adenocarcinoma, NOS
+# - Renal cell carcinoma, NOS
+# - Renal cell carcinoma, chromophobe type
+# - Synovial sarcoma, spindle cell
+
+# CCRCC vs. PRCC vs. CHRCC
+# Clear Cell, Papillary, and Chromophobe Renal Cell Carcinoma
+# Kidney Chromophobe Renal Cell Carcinoma (TCGA-KICH)
+# Kidney Renal Papillary Cell Carcinoma (TCGA-KIRP)
+# Kidney Renal Clear Cell Carcinoma (TCGA-KIRC) 
+"[ccrcc-prcc-chrcc]_train=tcga":
+  train-valid:
+    - identifiers: ["tcga/kidney/ffpe"]
+      labels:
+        "Clear cell adenocarcinoma, NOS": 0
+        "Papillary adenocarcinoma, NOS": 1
+        "Renal cell carcinoma, chromophobe type": 2
+    - identifiers: ["tcga/kidney/frozen"]
+      labels:
+        "Clear cell adenocarcinoma, NOS": 0
+        "Papillary adenocarcinoma, NOS": 1
+        "Renal cell carcinoma, chromophobe type": 2
