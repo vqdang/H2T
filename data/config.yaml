@@ -1,0 +1,312 @@
+# * Available pathologic labels in TCGA Lung
+# - Acinar cell carcinoma
+# - Adenocarcinoma with mixed subtypes
+# - Adenocarcinoma, NOS
+# - Basaloid squamous cell carcinoma
+# - Bronchio-alveolar carcinoma, mucinous
+# - Bronchiolo-alveolar adenocarcinoma, NOS
+# - Bronchiolo-alveolar carcinoma, non-mucinous
+# - Clear cell adenocarcinoma, NOS
+# - Micropapillary carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Papillary adenocarcinoma, NOS
+# - Papillary squamous cell carcinoma
+# - Signet ring cell carcinoma
+# - Solid carcinoma, NOS
+# - Squamous cell carcinoma, NOS
+# - Squamous cell carcinoma, keratinizing, NOS
+# - Squamous cell carcinoma, large cell, nonkeratinizing, NOS
+# - Squamous cell carcinoma, small cell, nonkeratinizing
+
+
+"[normal-tumor]_train=cptac_test=tcga":
+  train-valid:
+    - identifiers: ["cptac/lung/luad", "cptac/lung/lscc"]
+      labels:
+        "normal": 0
+        "blood": 0
+        "Adenocarcinoma": 1
+        "Squamous cell carcinoma": 1
+  test:
+    - identifiers:
+        [
+          "tcga/lung/ffpe/luad",
+          "tcga/lung/ffpe/lscc",
+          "tcga/lung/frozen/luad",
+          "tcga/lung/frozen/lscc",
+        ]
+      labels:
+        "normal": 0
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 1
+        "Papillary squamous cell carcinoma": 1
+        "Squamous cell carcinoma, NOS": 1
+        "Squamous cell carcinoma, keratinizing, NOS": 1
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 1
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 1
+
+"[luad-lusc]_train=cptac_test=tcga":
+  train-valid:
+    - identifiers: ["cptac/lung/luad", "cptac/lung/lscc"]
+      labels:
+        "Adenocarcinoma": 1
+        "Squamous cell carcinoma": 0
+  test:
+    - identifiers:
+        [
+          "tcga/lung/ffpe/luad",
+          "tcga/lung/ffpe/lscc",
+          "tcga/lung/frozen/luad",
+          "tcga/lung/frozen/lscc",
+        ]
+      labels:
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 0
+        "Papillary squamous cell carcinoma": 0
+        "Squamous cell carcinoma, NOS": 0
+        "Squamous cell carcinoma, keratinizing, NOS": 0
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 0
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 0
+
+"[normal-luad-lusc]_train=cptac_test=tcga":
+  train-valid:
+    - identifiers: ["cptac/lung/luad", "cptac/lung/lscc"]
+      labels:
+        "normal": 0
+        "blood": 0
+        "Adenocarcinoma": 1
+        "Squamous cell carcinoma": 2
+  test:
+    - identifiers:
+        [
+          "tcga/lung/ffpe/luad",
+          "tcga/lung/ffpe/lscc",
+          "tcga/lung/frozen/luad",
+          "tcga/lung/frozen/lscc",
+        ]
+      labels:
+        "normal": 0
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 2
+        "Papillary squamous cell carcinoma": 2
+        "Squamous cell carcinoma, NOS": 2
+        "Squamous cell carcinoma, keratinizing, NOS": 2
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 2
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 2
+
+"[luad-lusc]_train=tcga_test=cptac":
+  train-valid:
+    # * To generate old splits (tcga lung), need to merge
+    # * ffpe and frozen in this exact order
+    - identifiers: ["tcga/lung/ffpe/luad", "tcga/lung/ffpe/lscc"]
+      labels:
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 0
+        "Papillary squamous cell carcinoma": 0
+        "Squamous cell carcinoma, NOS": 0
+        "Squamous cell carcinoma, keratinizing, NOS": 0
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 0
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 0
+    # * To generate old splits (tcga lung), need to merge
+    # * ffpe and frozen in this exact order
+    - identifiers: ["tcga/lung/frozen/luad", "tcga/lung/frozen/lscc"]
+      labels:
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 0
+        "Papillary squamous cell carcinoma": 0
+        "Squamous cell carcinoma, NOS": 0
+        "Squamous cell carcinoma, keratinizing, NOS": 0
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 0
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 0
+  test:
+    - identifiers: ["cptac/lung/luad", "cptac/lung/lscc"]
+      labels:
+        "Adenocarcinoma": 1
+        "Squamous cell carcinoma": 0
+
+"[normal-luad-lusc]_train=tcga_test=cptac":
+  train-valid:
+    # * To generate old splits (tcga lung), need to merge
+    # * ffpe and frozen in this exact order
+    - identifiers: ["tcga/lung/ffpe/luad", "tcga/lung/ffpe/lscc"]
+      labels:
+        "normal": 0
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 2
+        "Papillary squamous cell carcinoma": 2
+        "Squamous cell carcinoma, NOS": 2
+        "Squamous cell carcinoma, keratinizing, NOS": 2
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 2
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 2
+    # * To generate old splits (tcga lung), need to merge
+    # * ffpe and frozen in this exact order
+    - identifiers: ["tcga/lung/frozen/luad", "tcga/lung/frozen/lscc"]
+      labels:
+        "normal": 0
+        # LUAD
+        "Acinar cell carcinoma": 1
+        "Adenocarcinoma with mixed subtypes": 1
+        "Adenocarcinoma, NOS": 1
+        "Bronchio-alveolar carcinoma, mucinous": 1
+        "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+        "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+        "Clear cell adenocarcinoma, NOS": 1
+        "Micropapillary carcinoma, NOS": 1
+        "Mucinous adenocarcinoma": 1
+        "Papillary adenocarcinoma, NOS": 1
+        "Signet ring cell carcinoma": 1
+        "Solid carcinoma, NOS": 1
+        # LUSC
+        "Basaloid squamous cell carcinoma": 2
+        "Papillary squamous cell carcinoma": 2
+        "Squamous cell carcinoma, NOS": 2
+        "Squamous cell carcinoma, keratinizing, NOS": 2
+        "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 2
+        "Squamous cell carcinoma, small cell, nonkeratinizing": 2
+  test:
+    - identifiers: ["cptac/lung/luad", "cptac/lung/lscc"]
+      labels:
+        "blood": 0
+        "normal": 0
+        "Adenocarcinoma": 1
+        "Squamous cell carcinoma": 2
+
+# * Available pathologic labels in TCGA Breast
+# - Adenoid cystic carcinoma
+# - Apocrine adenocarcinoma
+# - Basal cell carcinoma, NOS
+# - Carcinoma, NOS
+# - Cribriform carcinoma, NOS
+# - Infiltrating duct and lobular carcinoma
+# - Infiltrating duct carcinoma, NOS
+# - Infiltrating duct mixed with other types of carcinoma
+# - Infiltrating lobular mixed with other types of carcinoma
+# - Intraductal micropapillary carcinoma
+# - Intraductal papillary adenocarcinoma with invasion
+# - Large cell neuroendocrine carcinoma
+# - Lobular carcinoma, NOS
+# - Malignant lymphoma, large B-cell, diffuse, NOS
+# - Medullary carcinoma, NOS
+# - Metaplastic carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Paget disease and infiltrating duct carcinoma of breast
+# - Papillary carcinoma, NOS
+# - Phyllodes tumor, malignant
+# - Pleomorphic carcinoma
+# - Secretory carcinoma of breast
+# - Tubular adenocarcinoma
+
+"[idc-lob]_train=tcga":
+  train-valid:
+    - identifiers: ["tcga/breast/ffpe"]
+      labels:
+        "Infiltrating duct carcinoma, NOS": 0
+        "Lobular carcinoma, NOS": 1
+    - identifiers: ["tcga/breast/frozen"]
+      labels:
+        "Infiltrating duct carcinoma, NOS": 0
+        "Lobular carcinoma, NOS": 1
+
+# * Available pathologic labels in TCGA Kidney
+# - Clear cell adenocarcinoma, NOS
+# - Giant cell sarcoma
+# - Papillary adenocarcinoma, NOS
+# - Renal cell carcinoma, NOS
+# - Renal cell carcinoma, chromophobe type
+# - Synovial sarcoma, spindle cell
+
+# CCRCC vs. PRCC vs. CHRCC
+# Clear Cell, Papillary, and Chromophobe Renal Cell Carcinoma
+# Kidney Chromophobe Renal Cell Carcinoma (TCGA-KICH)
+# Kidney Renal Papillary Cell Carcinoma (TCGA-KIRP)
+# Kidney Renal Clear Cell Carcinoma (TCGA-KIRC) 
+"[ccrcc-prcc-chrcc]_train=tcga":
+  train-valid:
+    - identifiers: ["tcga/kidney/ffpe"]
+      labels:
+        "Clear cell adenocarcinoma, NOS": 0
+        "Papillary adenocarcinoma, NOS": 1
+        "Renal cell carcinoma, chromophobe type": 2
+    - identifiers: ["tcga/kidney/frozen"]
+      labels:
+        "Clear cell adenocarcinoma, NOS": 0
+        "Papillary adenocarcinoma, NOS": 1
+        "Renal cell carcinoma, chromophobe type": 2
