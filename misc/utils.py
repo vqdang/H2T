@@ -1,3 +1,4 @@
+import yaml
 from typing import Union
 import copy
 import inspect
@@ -310,7 +311,7 @@ def mkdir(dir_path):
         os.makedirs(dir_path)
 
 
-def recur_find_ext(root_dir, ext_list):
+def recur_find_ext(root_dir, ext_list, followlinks=True):
     """Recursively find all files in directories end with the `ext` such as `ext='.png'`.
 
     Args:
@@ -325,7 +326,7 @@ def recur_find_ext(root_dir, ext_list):
     patterns = [f".*{v}$" for v in patterns]
 
     file_path_list = []
-    for cur_path, dir_list, file_list in os.walk(root_dir):
+    for cur_path, dir_list, file_list in os.walk(root_dir, followlinks=followlinks):
         for file_name in file_list:
             has_ext_flags = [
                 re.match(pattern, file_name) is not None for pattern in patterns
@@ -653,3 +654,22 @@ def intersection_filename(listA, listB, return_names=False):
     sublistB = np.array(listB)[np.array(sel_idx_list)]
 
     return sublistA.tolist(), sublistB.tolist()
+
+
+def update_nested_dict(orig_dict, new_dict):
+    for key, val in new_dict.items():
+        if isinstance(val, collections.Mapping):
+            tmp = update_nested_dict(orig_dict.get(key, {}), val)
+            orig_dict[key] = tmp
+        # elif isinstance(val, list):
+        #     orig_dict[key] = (orig_dict.get(key, []) + val)
+        else:
+            orig_dict[key] = new_dict[key]
+    return orig_dict
+
+
+def load_yaml(path):
+    with open(path) as fptr:
+        info = yaml.full_load(fptr)
+    return info
+
