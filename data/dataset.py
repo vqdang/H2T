@@ -30,7 +30,6 @@ class TCGA(object):
 
         clinical_info = pd.read_csv(clinical_file, sep="\t")
         clinical_info = clinical_info[["case_id", "case_submitter_id", "primary_diagnosis"]]
-        # print(np.unique(clinical_info["primary_diagnosis"]))
 
         # a patient can be diagnosed with disease X (recorded within
         # `clinical_info`). However, a tissue slide can be either normal / disease,

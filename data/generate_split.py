@@ -33,6 +33,7 @@ def retrieve_dataset_slide_info(feature_root_dir, dataset_identifiers):
         )
         slide_names = [pathlib.Path(v).stem for v in slide_names]
         slide_names = [str(v).replace(".features", "") for v in slide_names]
+        assert len(slide_names) > 0, f"{feature_root_dir}/{identifier}/"
 
         if "tcga" in identifier:
             organ_identifier = identifier.split("/")[1]
@@ -92,6 +93,12 @@ def per_dataset_stratified_split(
                 identifier = "/".join(identifier)
                 identifer_samples = dataset_sample_info[identifier]
                 samples.extend(identifer_samples)
+            
+            #
+            compositions = np.unique([v[1] for v in samples], return_counts=True)
+            print(*list(zip(*compositions)), sep="\n")
+            print("----")
+            #
 
             # filter samples with labels that are not within selected
             # set out (contained as keys within `label_mapping`)
@@ -135,26 +142,31 @@ def per_dataset_stratified_split(
 
 
 dataset_identifiers = [
-    "tcga/lung/ffpe/lscc",
-    "tcga/lung/frozen/lscc",
-    "tcga/lung/ffpe/luad",
-    "tcga/lung/frozen/luad",
-    "cptac/lung/luad",
-    "cptac/lung/lscc",
+    # "tcga/lung/ffpe/lscc",
+    # "tcga/lung/frozen/lscc",
+    # "tcga/lung/ffpe/luad",
+    # "tcga/lung/frozen/luad",
+    # "cptac/lung/luad",
+    # "cptac/lung/lscc",
     # "tcga/breast/ffpe",
     # "tcga/breast/frozen",
-    # "tcga/kidney/ffpe",
-    # "tcga/kidney/frozen",
+    "tcga/kidney/ffpe",
+    "tcga/kidney/frozen",
 ]
 
-PWD = "/mnt/storage_0/workspace/h2t/"
-feature_root_dir = "/mnt/storage_0/workspace/h2t/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
+# PWD = "/mnt/storage_0/workspace/h2t/"
+# feature_root_dir = "/mnt/storage_0/workspace/h2t/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
+
+PWD = "/root/local_storage/storage_0/workspace/h2t/"
+feature_root_dir = "/root/dgx_workspace/h2t/features/swav/"
 
 dataset_sample_info = retrieve_dataset_slide_info(feature_root_dir, dataset_identifiers)
 
+SPLIT_CODE = "[idc-lob]_train=tcga"
 config = load_yaml(f"{PWD}/data/config.yaml")
-# for split_name, split_info in config.items():
-#     splits = per_dataset_stratified_split(split_info)
-#     break
+splits = per_dataset_stratified_split(config[SPLIT_CODE], dataset_sample_info)
+print(np.unique([v[1] for v in splits[0]["train"]], return_counts=True))
+print(np.unique([v[1] for v in splits[0]["valid"]], return_counts=True))
+joblib.dump(splits, f"{SPLIT_CODE}.dat")
 
 # %%

@@ -1,3 +1,56 @@
+# * Available pathologic labels in TCGA Lung
+# - Acinar cell carcinoma
+# - Adenocarcinoma with mixed subtypes
+# - Adenocarcinoma, NOS
+# - Basaloid squamous cell carcinoma
+# - Bronchio-alveolar carcinoma, mucinous
+# - Bronchiolo-alveolar adenocarcinoma, NOS
+# - Bronchiolo-alveolar carcinoma, non-mucinous
+# - Clear cell adenocarcinoma, NOS
+# - Micropapillary carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Papillary adenocarcinoma, NOS
+# - Papillary squamous cell carcinoma
+# - Signet ring cell carcinoma
+# - Solid carcinoma, NOS
+# - Squamous cell carcinoma, NOS
+# - Squamous cell carcinoma, keratinizing, NOS
+# - Squamous cell carcinoma, large cell, nonkeratinizing, NOS
+# - Squamous cell carcinoma, small cell, nonkeratinizing
+
+# * Available pathologic labels in TCGA Kidney
+# - Clear cell adenocarcinoma, NOS
+# - Giant cell sarcoma
+# - Papillary adenocarcinoma, NOS
+# - Renal cell carcinoma, NOS
+# - Renal cell carcinoma, chromophobe type
+# - Synovial sarcoma, spindle cell
+
+# * Available pathologic labels in TCGA Breast
+# - Adenoid cystic carcinoma
+# - Apocrine adenocarcinoma
+# - Basal cell carcinoma, NOS
+# - Carcinoma, NOS
+# - Cribriform carcinoma, NOS
+# - Infiltrating duct and lobular carcinoma
+# - Infiltrating duct carcinoma, NOS
+# - Infiltrating duct mixed with other types of carcinoma
+# - Infiltrating lobular mixed with other types of carcinoma
+# - Intraductal micropapillary carcinoma
+# - Intraductal papillary adenocarcinoma with invasion
+# - Large cell neuroendocrine carcinoma
+# - Lobular carcinoma, NOS
+# - Malignant lymphoma, large B-cell, diffuse, NOS
+# - Medullary carcinoma, NOS
+# - Metaplastic carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Paget disease and infiltrating duct carcinoma of breast
+# - Papillary carcinoma, NOS
+# - Phyllodes tumor, malignant
+# - Pleomorphic carcinoma
+# - Secretory carcinoma of breast
+# - Tubular adenocarcinoma
+
 "[normal-tumor]_train=cptac_test=tcga":
   train-valid:
     - identifiers: ["cptac/lung/luad", "cptac/lung/lscc"]
@@ -227,3 +280,14 @@
         "normal": 0
         "Adenocarcinoma": 1
         "Squamous cell carcinoma": 2
+
+"[idc-lob]_train=tcga":
+  train-valid:
+    - identifiers: ["tcga/breast/ffpe"]
+      labels:
+        "Infiltrating duct carcinoma, NOS": 0
+        "Lobular carcinoma, NOS": 1
+    - identifiers: ["tcga/breast/frozen"]
+      labels:
+        "Infiltrating duct carcinoma, NOS": 0
+        "Lobular carcinoma, NOS": 1
