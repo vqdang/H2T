@@ -154,7 +154,7 @@ class ABCConfig(ABC):
         return config
 
     @staticmethod
-    def config(paramset, dataset_names: List[str]):
+    def config(paramset, dataset_names: List[str], num_types: int = 2):
         """
         Args:
             dataset_names: A list contain names of dataset to be used
@@ -170,7 +170,7 @@ class ABCConfig(ABC):
             for k in dataset_names
         }
         paramset["loader_kwargs"] = loader_kwargs
-        paramset["model_kwargs"]["num_types"] = 5
+        paramset["model_kwargs"]["num_types"] = num_types
 
         train_loaders = [v for v in dataset_names if "train" in v]
         infer_loaders = [v for v in dataset_names if not ("train" in v)]

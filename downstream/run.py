@@ -1,3 +1,4 @@
+import numpy as np
 import argparse
 import importlib
 import logging
@@ -135,7 +136,11 @@ if __name__ == "__main__":
         with open(f"{save_path}/settings.yml", "w") as fptr:
             yaml.dump(run_paramset, fptr, default_flow_style=False)
 
-        model_config = ABCConfig.config(run_paramset, list(data_split_info.keys()))
+        all_labels = flatten_list(list(data_split_info.values()))
+        all_labels = np.unique([v[1] for v in all_labels])
+        model_config = ABCConfig.config(
+            run_paramset, list(data_split_info.keys()), num_types=len(all_labels)
+        )
 
         run_kwargs = {
             "seed": seed,
