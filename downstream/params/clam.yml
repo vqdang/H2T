@@ -4,8 +4,8 @@ metadata:
   architecture_name: "clam"
 
 loader_kwargs:
-  train: { 'batch_size' : 8, 'nr_procs' : 4}
-  infer: { 'batch_size' : 8, 'nr_procs' : 4}
+  train: { 'batch_size' : 8, 'nr_procs' : 0}
+  infer: { 'batch_size' : 8, 'nr_procs' : 0}
 
 model_kwargs:
   dims: [2048, 512, 256]

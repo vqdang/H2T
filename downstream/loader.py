@@ -19,29 +19,22 @@ from torch.nn.utils.rnn import pad_sequence
 class SequenceDataset(torch.utils.data.Dataset):
     def __init__(self,
         root_dir,
-        task_code,
         sample_info_list,
         run_mode='train',
         setup_augmentor=True,
-        atlas_kwargs=None,
         selection_dir=None,
-        **kwargs):
+        **kwargs
+    ):
         """
-        atlas_mode:
-            rep_substitue
-            sbj_selection
-            3closest_map # use the other loader
         """
                         
         self.kwargs = kwargs
 
-        self.task_code = task_code
         self.root_dir = root_dir
         self.selection_dir = selection_dir
 
         self.run_mode = run_mode    
         self.sample_info_list = sample_info_list
-        self.atlas_kwargs = atlas_kwargs
 
         self.id = 0
         if setup_augmentor:
@@ -99,16 +92,6 @@ class SequenceDataset(torch.utils.data.Dataset):
         
     def __getitem__(self, idx):
         info, label = self.sample_info_list[idx]
-
-        label = int(label)
-        if self.task_code == 'NORMAL-TUMOR':
-            label = int(label > 0)
-        elif self.task_code == 'LUAD-LUSC':
-            assert label in [1, 2]
-            label = int(label == 2)
-        else:
-            label = int(label)
-
         seq_feat, seq_pos = self.load_sequence(info)
         return seq_feat, seq_pos, float(label)
 
@@ -116,7 +99,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         return None, None
 
     @staticmethod
-    def collate(seq_list):  # batch is a list
+    def loader_collate_fn(seq_list):  # batch is a list
         # batch first means assuming seq_list has shape batch x time step x dim
         seq_feat_list, seq_pos_list, seq_label_list = zip(*seq_list)
         seq_len_list = [v.shape[0] for v in seq_feat_list]
