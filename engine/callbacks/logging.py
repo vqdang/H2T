@@ -2,6 +2,7 @@ import json
 import logging
 import random
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -142,18 +143,16 @@ class LoggingOutput(BaseCallbacks):
         for value_name, value_text in formatted_values.items():
             value_name = value_name.replace("#", "_")  # strip special char
             value_name = colored(value_name.ljust(max_length), "green")
-            logging.info("%s : %s" % (value_name, value_text))
+            logging.info(f"{value_name} : {value_text}")
 
         if global_state.logging is None or global_state.logging is False:
             return
 
-        # * Serialize to JSON file
-        stat_dict = get_serializable_values("json")
-        # json stat log file, update and overwrite
-        with open(state.log_info["yaml_file"]) as fptr:
-            prev_data = yaml.full_load(fptr)  # a dict
+        # * Serialize to file
+        stat_dict = get_serializable_values('json')
+        prev_data = joblib.load(state.log_info['log_file'])
 
-        tracker_code = "%s-%06d" % (run_affix, current_tracker)
+        tracker_code = f"{run_affix}-{current_tracker:06d}"
         if tracker_code in prev_data:
             old_stat_dict = prev_data[tracker_code]
             stat_dict.update(old_stat_dict)
@@ -161,8 +160,7 @@ class LoggingOutput(BaseCallbacks):
         prev_data.update(current_tracker_dict)
 
         # TODO: may corrupt
-        with open(state.log_info["yaml_file"], "w") as fptr:
-            yaml.dump(prev_data, fptr, default_flow_style=False)
+        joblib.dump(prev_data, state.log_info['log_file'])
 
         # * Serialize to Tensorboard
         tfwriter = state.log_info["tfwriter"]

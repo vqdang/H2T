@@ -1,8 +1,8 @@
-
 import inspect
 import logging
 import os
 
+import joblib
 import numpy as np
 import torch
 import yaml
@@ -24,12 +24,13 @@ def worker_init_fn(worker_id):
     # then dataloader with this seed will spawn worker, now we reseed the worker
     worker_info = torch.utils.data.get_worker_info()
     # to make it more random, simply switch torch.randint to np.randint
-    worker_seed = torch.randint(0, 2**32, (1,))[0].cpu().item() + worker_id
+    worker_seed = torch.randint(0, 2 ** 32, (1,))[0].cpu().item() + worker_id
     # print('Loader Worker %d Uses RNG Seed: %d' % (worker_id, worker_seed))
     # retrieve the dataset copied into this worker process
     # then set the random seed for each augmentation
-    worker_info.dataset.setup_augmentor(worker_id, worker_seed)  
+    worker_info.dataset.setup_augmentor(worker_id, worker_seed)
     return
+
 
 ####
 class RunManager(object):
@@ -37,6 +38,7 @@ class RunManager(object):
     Either used to view the dataset or
     to initialise the main training loop. 
     """
+
     def __init__(self, **kwargs):
         self.phase_idx = 0
         for variable, value in kwargs.items():
@@ -48,20 +50,20 @@ class RunManager(object):
         nr_procs = nr_procs if not self.debug else 0
 
         input_dataset = self.create_dataset(
-                                run_mode=run_mode,
-                                subset_name=subset_name,
-                                setup_augmentor=nr_procs==0)
-        logging.info(f'Dataset {run_mode}: {subset_name} - {len(input_dataset)}')
+            run_mode=run_mode, subset_name=subset_name, setup_augmentor=nr_procs == 0
+        )
+        logging.info(f"Dataset {run_mode}: {subset_name} - {len(input_dataset)}")
 
-        dataloader = DataLoader(input_dataset,
-                        num_workers = nr_procs,
-                        batch_size  = batch_size,
-                        shuffle     = run_mode=='train',
-                        # shuffle     = False,
-                        drop_last   = run_mode=='train',
-                        worker_init_fn = worker_init_fn,
-                        collate_fn = input_dataset.loader_collate_fn
-                    )
+        dataloader = DataLoader(
+            input_dataset,
+            num_workers=nr_procs,
+            batch_size=batch_size,
+            shuffle=run_mode == "train",
+            # shuffle     = False,
+            drop_last=run_mode == "train",
+            worker_init_fn=worker_init_fn,
+            collate_fn=input_dataset.loader_collate_fn,
+        )
         return dataloader
 
     ####
@@ -77,50 +79,54 @@ class RunManager(object):
             # rm_n_mkdir(log_dir)
 
             tfwriter = SummaryWriter(log_dir=log_dir)
-            yaml_log_file = log_dir + "/stats.yaml"
-            with open(yaml_log_file, "w") as fptr:
-                yaml.dump({}, fptr, default_flow_style=False)
+            log_file = f"{log_dir}/stats.dat"
+            joblib.dump({}, log_file)
+
             log_info = {
-                "yaml_file": yaml_log_file,
+                "log_file": log_file,
                 "tfwriter": tfwriter,
             }
         # ! create list of data loader
         def create_loader_dict(run_mode, loader_name_list):
             loader_dict = {}
             for loader_name in loader_name_list:
-                loader_opt = opt['loader'][loader_name]
+                loader_opt = opt["loader"][loader_name]
                 loader_dict[loader_name] = self._get_datagen(
-                        loader_opt['batch_size'], 
-                        run_mode, loader_name,
-                        nr_procs=loader_opt['nr_procs'],
-                        fold_idx=fold_idx)
+                    loader_opt["batch_size"],
+                    run_mode,
+                    loader_name,
+                    nr_procs=loader_opt["nr_procs"],
+                    fold_idx=fold_idx,
+                )
             return loader_dict
 
         ####
         def get_last_chkpt_path(prev_phase_dir, net_name):
-            stat_file_path = prev_phase_dir + '/stats.yaml'
+            stat_file_path = f"{prev_phase_dir}/stats.yaml"
             with open(stat_file_path) as fptr:
                 info = yaml.full_load(fptr)
             # ! prioritize epoch over step if both exist
-            epoch_list = [int(v.split('-')[-1]) for v in info.keys() if 'epoch' in v]
-            step_list  = [int(v.split('-')[-1]) for v in info.keys() if 'step' in v]
+            epoch_list = [int(v.split("-")[-1]) for v in info.keys() if "epoch" in v]
+            step_list = [int(v.split("-")[-1]) for v in info.keys() if "step" in v]
             if len(epoch_list) > 0:
-                last_chkpts_path = "%s/%s_epoch-%06d.tar" % (prev_phase_dir, 
-                                            net_name, max(epoch_list))
+                last_chkpts_path = (
+                    f"{prev_phase_dir}/{net_name}_epoch-{max(epoch_list):06d}.tar"
+                )
             else:
-                last_chkpts_path = "%s/%s_step-%06d.tar" % (prev_phase_dir, 
-                                            net_name, max(step_list))
+                last_chkpts_path = (
+                    f"{prev_phase_dir}/{net_name}step-{max(step_list):06d}.tar"
+                )
             return last_chkpts_path
 
         # TODO: adding way to load pretrained weight or resume the training
         # parsing the network and optimizer information
         net_run_info = {}
-        net_info_opt = opt['run_info']
-        for net_name, net_info in net_info_opt.items():                   
-            assert inspect.isclass(net_info['desc']) \
-                        or inspect.isfunction(net_info['desc']), \
-                "`desc` must be a Class or Function which instantiate NEW objects !!!"
-            net_desc = net_info['desc']()
+        net_info_opt = opt["run_info"]
+        for net_name, net_info in net_info_opt.items():
+            assert inspect.isclass(net_info["desc"]) or inspect.isfunction(
+                net_info["desc"]
+            ), "`desc` must be a Class or Function which instantiate NEW objects !!!"
+            net_desc = net_info["desc"]()
 
             # TODO: customize print-out for each run ?
             # summary_string(net_desc, (3, 270, 270), device='cpu')
@@ -154,42 +160,45 @@ class RunManager(object):
                 logging.info("Detected Unknown Variables: %s \n" % load_feedback[1])
 
             from torch.cuda.amp import GradScaler
+
             # net_desc = torch.jit.script(net_desc)
             net_desc = DataParallel(net_desc)
-            net_desc = net_desc.to('cuda')
+            net_desc = net_desc.to("cuda")
             # print(net_desc) # * dump network definition or not?
-            optimizer, optimizer_args = net_info['optimizer']
+            optimizer, optimizer_args = net_info["optimizer"]
             optimizer = optimizer(net_desc.parameters(), **optimizer_args)
             # TODO: expand for external aug for scheduler
-            nr_iter = opt['nr_epochs'] # * len(loader_dict['train'])
-            scheduler = net_info['lr_scheduler'](optimizer, nr_iter)
+            nr_iter = opt["nr_epochs"]  # * len(loader_dict['train'])
+            scheduler = net_info["lr_scheduler"](optimizer, nr_iter)
             net_run_info[net_name] = {
-                'desc' : net_desc,
-                'optimizer' : optimizer,
-                'lr_scheduler' : scheduler,
+                "desc": net_desc,
+                "optimizer": optimizer,
+                "lr_scheduler": scheduler,
                 # TODO: standardize API for external hooks
-                'extra_info' : net_info['extra_info'],
-                'gradient_scaler': GradScaler(),
+                "extra_info": net_info["extra_info"],
+                "gradient_scaler": GradScaler(),
             }
 
         # parsing the running engine configuration
-        assert 'train' in run_engine_opt, 'No engine for training detected in description file'
+        assert (
+            "train" in run_engine_opt
+        ), "No engine for training detected in description file"
 
         # initialize runner and attach callback afterward
         # * all engine shared the same network info declaration
         runner_dict = {}
         for runner_name, runner_opt in run_engine_opt.items():
-            runner_loader_dict = create_loader_dict(runner_name, runner_opt['loader'])
+            runner_loader_dict = create_loader_dict(runner_name, runner_opt["loader"])
             runner_dict[runner_name] = RunEngine(
                 loader_dict=runner_loader_dict,
                 engine_name=runner_name,
-                run_step=runner_opt['run_step'],
+                run_step=runner_opt["run_step"],
                 run_info=net_run_info,
                 log_info=log_info,
             )
 
         for runner_name, runner in runner_dict.items():
-            callback_info = run_engine_opt[runner_name]['callbacks']
+            callback_info = run_engine_opt[runner_name]["callbacks"]
             for event, callback_list, in callback_info.items():
                 for callback in callback_list:
                     if callback.engine_trigger:
@@ -198,25 +207,25 @@ class RunManager(object):
                     runner.add_event_handler(event, callback)
 
         # retrieve main runner
-        main_runner = runner_dict['train']
+        main_runner = runner_dict["train"]
         main_runner.separate_loader_output = False
         main_runner.state.logging = self.logging
         main_runner.state.log_dir = log_dir
-        # start the run loop 
-        main_runner.run(opt['nr_epochs'])
+        # start the run loop
+        main_runner.run(opt["nr_epochs"])
 
-        logging.info('\n')
-        logging.info('########################################################')
-        logging.info('\n')
+        logging.info("\n")
+        logging.info("########################################################")
+        logging.info("\n")
         return
-    
+
     ####
     def run(self):
         """
         Define multi-stage run or cross-validation or whatever in here
         """
-        phase_list = self.model_config['phase_list']
-        engine_opt = self.model_config['run_engine']
+        phase_list = self.model_config["phase_list"]
+        engine_opt = self.model_config["run_engine"]
 
         prev_save_path = None
         for phase_idx, phase_info in enumerate(phase_list):
@@ -225,7 +234,8 @@ class RunManager(object):
             else:
                 save_path = f"{self.log_dir}/{phase_idx:02d}/"
 
-            self._run_once(phase_info, engine_opt, save_path, 
-                            prev_log_dir=prev_save_path)
+            self._run_once(
+                phase_info, engine_opt, save_path, prev_log_dir=prev_save_path
+            )
             prev_save_path = save_path
             self.phase_idx += 1

@@ -24,8 +24,11 @@ class ABCRecipe(ABC):
         def track_value(name, value, vtype):
             return track_dict[vtype].update({name: value})
 
-        logit = np.squeeze(np.array(raw_data['prob']))
-        true = np.squeeze(np.array(raw_data['label']))
+        logit = np.concatenate([v["prob"] for v in raw_data])
+        true = np.concatenate([v["label"] for v in raw_data])
+
+        logit = np.squeeze(logit)
+        true = np.squeeze(true)
         num_classes = len(np.unique(true))
 
         loss = F.cross_entropy(
