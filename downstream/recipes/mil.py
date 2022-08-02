@@ -36,8 +36,8 @@ class MILRecipe(ABCRecipe):
         model.train()
         model.zero_grad()  # not rnn so not accumulate
 
-        loss = cls.inference(
-            model, seq_feat_list, seq_pos_list, seq_len_list, seq_msk_list
+        loss = cls.training(
+            model, [seq_feat_list, seq_pos_list, seq_len_list, seq_msk_list], label_list
         )
 
         track_value("overall_loss", loss.cpu().item())
@@ -72,15 +72,12 @@ class MILRecipe(ABCRecipe):
 
         # --------------------------------------------------------------
         logits = cls.inference(
-            model, seq_feat_list, seq_pos_list, seq_len_list, seq_msk_list
+            model, [seq_feat_list, seq_pos_list, seq_len_list, seq_msk_list]
         )
 
         # * Its up to user to define the protocol to process the raw output per step!
         result_dict = {  # protocol for contents exchange within `raw`
-            "raw": {
-                "label": label_list.cpu().numpy(),
-                "prob": logits.cpu().numpy(),
-            }
+            "raw": {"label": label_list.cpu().numpy(), "prob": logits.cpu().numpy(),}
         }
         return result_dict
 

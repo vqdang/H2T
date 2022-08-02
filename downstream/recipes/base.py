@@ -53,3 +53,13 @@ class ABCRecipe(ABC):
         track_dict['array']['true'] = true
         track_dict['array']['pred'] = prob
         return track_dict
+
+    @staticmethod
+    def recipe(model_code):
+        from .mil import CLAMRecipe, TransformerRecipe
+        if "clam" in model_code:
+            return CLAMRecipe
+        elif "transformer" in model_code:
+            return TransformerRecipe
+        else:
+            assert False    
