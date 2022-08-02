@@ -1,0 +1,20 @@
+
+
+shape_code  : '512_256'
+mpp_code    : 'mpp=0.50'
+feat_code   : 'swav_resnet50'
+
+method_code : 'hopfield_pool'
+
+model_kwargs: # other field will be populated according to the crawling from paramdist
+  'nr_types'  : 2
+  'embed_dim' : 2048
+
+optimizer_kwargs:
+  'lr' : 1.0e-5
+  'betas' : [0.9, 0.999]
+  'weight_decay' : 0.0
+
+loader_kwargs:
+  train: { 'batch_size' : 2, 'nr_procs' : 8}
+  infer: { 'batch_size' : 2, 'nr_procs' : 8}

@@ -1,0 +1,48 @@
+loader_kwargs:
+# !----- < transformer-1
+  # train: { 'batch_size' : 8, 'nr_procs' : 4}
+  # infer: { 'batch_size' : 8, 'nr_procs' : 4}
+# !----- > transformer-1
+
+# !----- < transformer-2
+  train: { 'batch_size' : 2, 'nr_procs' : 4}
+  infer: { 'batch_size' : 2, 'nr_procs' : 4}
+# !----- > transformer-2
+
+model_kwargs:
+  embed_dim: 2048
+  num_types: 2
+
+# !----- < transformer-1
+  # layers:
+  #   # last one is the pooling using hopfield
+  #   - state_dim: 128
+  #     num_states: 16
+  #     num_heads: 8
+  #     drop_out: 0.5
+# !----- > transformer-1
+
+
+# !----- < transformer-2
+  proj_dim: 128
+  layers:
+    # others on top is torch version to make it fast
+    - state_dim: 128
+      num_states: 16
+      num_heads: 8
+      drop_out: 0.5
+
+      # last one is the pooling using hopfield
+    - state_dim: 128
+      num_states: 16
+      num_heads: 8
+      drop_out: 0.5
+# !----- > transformer-2
+
+optimizer_kwargs:
+  betas:
+  - 0.9
+  - 0.999
+  lr: 1.0e-04
+  weight_decay: 0.0
+seed: 5
