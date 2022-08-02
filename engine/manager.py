@@ -223,11 +223,7 @@ class RunManager(object):
             if len(phase_list) == 1:
                 save_path = self.log_dir
             else:
-                save_path = self.log_dir + '/%02d' % (phase_idx)
-
-            if phase_idx == 0:
-                prev_save_path = save_path
-                continue
+                save_path = f"{self.log_dir}/{phase_idx:02d}/"
 
             self._run_once(phase_info, engine_opt, save_path, 
                             prev_log_dir=prev_save_path)
