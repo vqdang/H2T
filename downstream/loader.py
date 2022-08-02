@@ -21,7 +21,7 @@ class SequenceDataset(torch.utils.data.Dataset):
     ):
         """ """
 
-        self.patch_shape = 256
+        self.step_shape = 256
         self.kwargs = kwargs
         self.root_dir = root_dir
         self.selection_dir = selection_dir
@@ -43,10 +43,10 @@ class SequenceDataset(torch.utils.data.Dataset):
         return len(self.sample_info_list)
 
     def normalize_positions(self, positions):
-        """Quantize/Normalize the positions with respect to the patch size.
+        """Quantize/Normalize the positions with respect to the step size.
 
         Example: Consider a list of positions `[[256, 256], [512, 512], [1024, 1024]]`
-            in `(x, y)` coordinates, in term of patch of shape `(H, W) = (256, 256)`,
+            in `(x, y)` coordinates, in term of step of shape `(H, W) = (256, 256)`,
             the above list is first converted to `[[1, 1], [2, 2], [4, 4]]`. Afterward,
             they are shifted to the top-left normalized corner and become
             `[[0, 0], [1, 1], [3, 3]]`.
@@ -54,7 +54,7 @@ class SequenceDataset(torch.utils.data.Dataset):
         """
         normalized_positions = (
             positions - np.min(positions, axis=0, keepdims=True)
-        ) / self.patch_shape
+        ) / self.step_shape
         normalized_positions = normalized_positions.astype(np.int32)
         return normalized_positions
 
