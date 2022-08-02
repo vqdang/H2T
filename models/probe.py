@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from backbone import ResNetExt
+from .backbone import ResNetExt
 from .encoding import OnehotEncoding, SineEncoding
 
 

@@ -2,8 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from downstream.models.encoding import PositionalEncoding2DList
-
+from ..encoding import PositionalEncoding2DList
 from ..backbone import hopfield as hf
 
 
