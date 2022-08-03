@@ -163,10 +163,28 @@ class _Image(object):
         return 'image', value
 
 
+class _Array(object):
+    @staticmethod
+    def to_console(value):
+        # TODO: add warn for not possible or sthg here
+        return None
+
+    @staticmethod
+    def to_json(value):
+        # TODO: add warn for not possible or sthg here
+        return value.tolist()
+
+    @staticmethod
+    def to_tensorboard(value):
+        # TODO: add method
+        return None
+
+
 __converter_dict = {
     'scalar': _Scalar,
     'conf_mat': _ConfusionMatrix,
-    'image': _Image
+    'image': _Image,
+    'array': _Array
 }
 
 

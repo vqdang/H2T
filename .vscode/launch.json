@@ -12,7 +12,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "TIATOOLBOX": "/mnt/storage_0/workspace/tiatoolbox"
+                "TIATOOLBOX": "/mnt/storage_0/workspace/tiatoolbox",
+                "PROJECT_WORKSPACE": "/mnt/storage_0/workspace/h2t/"
             }            
         }
     ]

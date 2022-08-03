@@ -285,6 +285,13 @@
         "Infiltrating duct carcinoma, NOS": 0
         "Lobular carcinoma, NOS": 1
 
+"[idc-lob]_train=tcga_ffpe":
+  train-valid:
+    - identifiers: ["tcga/breast/ffpe"]
+      labels:
+        "Infiltrating duct carcinoma, NOS": 0
+        "Lobular carcinoma, NOS": 1
+
 # * Available pathologic labels in TCGA Kidney
 # - Clear cell adenocarcinoma, NOS
 # - Giant cell sarcoma
