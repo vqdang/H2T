@@ -1,22 +1,22 @@
-import numpy as np
 import argparse
 import importlib
 import logging
 import os
 
 import joblib
+import numpy as np
 import yaml
 
 from loader import SequenceDataset
 from misc.utils import (
+    flatten_list,
+    load_yaml,
     mkdir,
     rm_n_mkdir,
     rmdir,
-    load_yaml,
+    setup_logger,
     update_nested_dict,
-    flatten_list,
 )
-
 from recipes.opt import ABCConfig
 
 
@@ -113,26 +113,6 @@ if __name__ == "__main__":
     # * ------
 
     paramset = load_yaml(TRAINING_CONFIG_PATH)
-
-    def setup_logger(path: str):
-        """Will reset logger handler every single call."""
-        logging.basicConfig(
-            level=logging.INFO,
-        )
-        log_formatter = logging.Formatter(
-            "|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
-            datefmt="%Y-%m-%d|%H:%M:%S",
-        )
-        log = logging.getLogger()  # root logger
-        for hdlr in log.handlers[:]:  # remove all old handlers
-            log.removeHandler(hdlr)
-        new_hdlr_list = [
-            logging.FileHandler(path),
-            logging.StreamHandler(),
-        ]
-        for hdlr in new_hdlr_list:
-            hdlr.setFormatter(log_formatter)
-            log.addHandler(hdlr)
 
     def run_one_split_with_param_set(
         save_path: str, data_split_info: dict, param_kwargs: dict
