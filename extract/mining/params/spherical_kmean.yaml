@@ -1,0 +1,9 @@
+
+random_seed: seed,
+num_clusters: None,
+cluster_method: "spherical_kmeans"
+reassignment_ratio: 0.1,
+num_loader_workers: 8
+num_subjects_per_batch: 16
+num_samples_per_subject: 256
+num_epochs: 50

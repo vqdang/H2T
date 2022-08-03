@@ -1,0 +1,91 @@
+# * Available pathologic labels in TCGA Lung
+# - Acinar cell carcinoma
+# - Adenocarcinoma with mixed subtypes
+# - Adenocarcinoma, NOS
+# - Basaloid squamous cell carcinoma
+# - Bronchio-alveolar carcinoma, mucinous
+# - Bronchiolo-alveolar adenocarcinoma, NOS
+# - Bronchiolo-alveolar carcinoma, non-mucinous
+# - Clear cell adenocarcinoma, NOS
+# - Micropapillary carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Papillary adenocarcinoma, NOS
+# - Papillary squamous cell carcinoma
+# - Signet ring cell carcinoma
+# - Solid carcinoma, NOS
+# - Squamous cell carcinoma, NOS
+# - Squamous cell carcinoma, keratinizing, NOS
+# - Squamous cell carcinoma, large cell, nonkeratinizing, NOS
+# - Squamous cell carcinoma, small cell, nonkeratinizing
+
+tcga-lung-normal:
+  identifiers:
+    [
+      "tcga/lung/ffpe/luad",
+      "tcga/lung/ffpe/lscc",
+      "tcga/lung/frozen/luad",
+      "tcga/lung/frozen/lscc",
+    ]
+  labels:
+    "normal": 0
+
+tcga-lung-all:
+  identifiers:
+    [
+      "tcga/lung/ffpe/luad",
+      "tcga/lung/ffpe/lscc",
+      "tcga/lung/frozen/luad",
+      "tcga/lung/frozen/lscc",
+    ]
+  labels:
+    "normal": 0
+    # LUAD
+    "Acinar cell carcinoma": 1
+    "Adenocarcinoma with mixed subtypes": 1
+    "Adenocarcinoma, NOS": 1
+    "Bronchio-alveolar carcinoma, mucinous": 1
+    "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+    "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+    "Clear cell adenocarcinoma, NOS": 1
+    "Micropapillary carcinoma, NOS": 1
+    "Mucinous adenocarcinoma": 1
+    "Papillary adenocarcinoma, NOS": 1
+    "Signet ring cell carcinoma": 1
+    "Solid carcinoma, NOS": 1
+    # LUSC
+    "Basaloid squamous cell carcinoma": 1
+    "Papillary squamous cell carcinoma": 1
+    "Squamous cell carcinoma, NOS": 1
+    "Squamous cell carcinoma, keratinizing, NOS": 1
+    "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 1
+    "Squamous cell carcinoma, small cell, nonkeratinizing": 1
+
+tcga-lung-luad-lusc:
+  identifiers:
+    [
+      "tcga/lung/ffpe/luad",
+      "tcga/lung/ffpe/lscc",
+      "tcga/lung/frozen/luad",
+      "tcga/lung/frozen/lscc",
+    ]
+  labels:
+    # LUAD
+    "Acinar cell carcinoma": 1
+    "Adenocarcinoma with mixed subtypes": 1
+    "Adenocarcinoma, NOS": 1
+    "Bronchio-alveolar carcinoma, mucinous": 1
+    "Bronchiolo-alveolar adenocarcinoma, NOS": 1
+    "Bronchiolo-alveolar carcinoma, non-mucinous": 1
+    "Clear cell adenocarcinoma, NOS": 1
+    "Micropapillary carcinoma, NOS": 1
+    "Mucinous adenocarcinoma": 1
+    "Papillary adenocarcinoma, NOS": 1
+    "Signet ring cell carcinoma": 1
+    "Solid carcinoma, NOS": 1
+    # LUSC
+    "Basaloid squamous cell carcinoma": 2
+    "Papillary squamous cell carcinoma": 2
+    "Squamous cell carcinoma, NOS": 2
+    "Squamous cell carcinoma, keratinizing, NOS": 2
+    "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 2
+    "Squamous cell carcinoma, small cell, nonkeratinizing": 2

@@ -1,23 +1,18 @@
-import multiprocessing as mp
-
-from tqdm import tqdm
-
 import logging
 import os
 import tarfile
+from io import BytesIO
 
 import joblib
 import numpy as np
 import torch
 import torch.utils.data as torch_data
 import yaml
-
-
-from io import BytesIO
-
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import StandardScaler
-from misc.utils import mkdir
+from tqdm import tqdm
+
+from h2t.misc.utils import mkdir, load_yaml, log_info
 
 
 class FileDataset(torch.utils.data.Dataset):
@@ -25,7 +20,7 @@ class FileDataset(torch.utils.data.Dataset):
         self,
         root_dir,
         subject_info_list,
-        num_samples,
+        num_samples_per_subject,
         setup_augmentor=True,
         l2norm=True,
         scaler=None,
@@ -39,6 +34,7 @@ class FileDataset(torch.utils.data.Dataset):
         self.root_dir = root_dir
         self.selection_dir = selection_dir
         self.subject_info_list = subject_info_list
+        self.num_samples_per_subject = num_samples_per_subject
 
         self.l2norm = l2norm
         self.scaler = scaler
@@ -62,7 +58,7 @@ class FileDataset(torch.utils.data.Dataset):
         feature_path = f"{self.root_dir}/{ds_code}/{wsi_code}.features.npy"
         patch_features = np.load(feature_path, mmap_mode="r")
 
-        if self.selection is not None:
+        if self.selection_dir is not None:
             selection_path = f"{self.selection_dir}/{ds_code}/{wsi_code}.npy"
             selections = np.load(selection_path)
             patch_features = patch_features[selections > 0]
@@ -73,7 +69,7 @@ class FileDataset(torch.utils.data.Dataset):
         patch_features = self._load(sample_info)
 
         # ! if sampling size > upper range, over-sampling may happen
-        sel = self.rng.integers(0, patch_features.shape[0], size=self.num_samples)
+        sel = self.rng.integers(0, patch_features.shape[0], size=self.num_samples_per_subject)
         patch_features = np.array(patch_features[sel])
         patch_features = np.squeeze(patch_features)
 
@@ -112,6 +108,7 @@ if __name__ == "__main__":
     os.environ["JOBLIB_TEMP_FOLDER"] = "exp_output/storage/a100/cache/"
     # os.environ['JOBLIB_TEMP_FOLDER'] = 'exp_output/storage/nima/cache/'
 
+    # * ----
     FEATURE_CODE = args.FEATURE_CODE
     ATLAS_ROOT_DATA = args.ATLAS_ROOT_DATA
     ATLAS_SOURCE_TISSUE = args.ATLAS_SOURCE_TISSUE
@@ -129,57 +126,75 @@ if __name__ == "__main__":
         f"{ATLAS_SOURCE_TISSUE}/{FEATURE_CODE}/{ATLAS_ROOT_DATA}/"
         # f'{WORKSPACE_DIR}/dump/cluster/'
     )
+    # * ----
 
-    mkdir(SAVE_DIR)
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d|%H:%M:%S",
-        handlers=[logging.FileHandler(f"{SAVE_DIR}/log.log"), logging.StreamHandler()],
+    # mkdir(SAVE_DIR)
+
+    from h2t.data.utils import retrieve_dataset_slide_info, retrieve_subset
+
+    # PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
+    # FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/[SWAV]-[mpp=0.50]-[512-256]/"
+
+    PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
+    CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
+
+    dataset_identifiers = [
+        "tcga/lung/ffpe/lscc",
+        "tcga/lung/frozen/lscc",
+        "tcga/lung/ffpe/luad",
+        "tcga/lung/frozen/luad",
+        # "cptac/lung/luad",
+        # "cptac/lung/lscc",
+        # "tcga/breast/ffpe",
+        # "tcga/breast/frozen",
+        # "tcga/kidney/ffpe",
+        # "tcga/kidney/frozen",
+    ]
+
+    DATASET_CODE = "tcga-lung-luad-lusc"
+    DATASET_CONFIG = load_yaml("/mnt/storage_0/workspace/h2t/h2t/extract/mining/config.yaml")
+    DATASET_CONFIG = DATASET_CONFIG[DATASET_CODE]
+
+    dataset_sample_info = retrieve_dataset_slide_info(
+        CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
     )
+    sample_info_list, _ = retrieve_subset(DATASET_CONFIG, dataset_sample_info)
+    # *
 
     seed = 5
+
+    recipe = load_yaml("/mnt/storage_0/workspace/h2t/h2t/extract/mining/params/spherical_kmean.yaml")
     rng_seeder = np.random.Generator(np.random.PCG64(seed))
 
-    num_epochs = 50 if args.NUM_EPOCHS is None else args.NUM_EPOCHS
-    if "mpp=0.50" in FEATURE_CODE:
-        # 256 for mpp=0.5, *4 for mpp=0.25
-        num_samples_per_subject = 256
-    else:
-        # 256 for mpp=0.5, *4 for mpp=0.25
-        num_samples_per_subject = 256 * 4
-
-    num_loader_workers = 8
-    num_subjects_per_batch = 16
-    batch_size = num_subjects_per_batch * num_samples_per_subject
-
-    atlas_construct_template_kwargs = {
-        "random_seed": seed,
-        "num_clusters": None,
-        "cluster_method": "spherical_kmeans",
-        "batch_size": batch_size,
-        "reassignment_ratio": 0.1,
-    }
-
     # *
-    ds = FileDataset(
-        FEAT_ROOT_DIR,
-        subject_info_list,
+    def retrieve_dataloader(
         num_samples_per_subject,
-        l2norm=False,
-        scaler=None,
-        selection_dir=SELECTION_DIR,
-    )
-    loader = torch_data.DataLoader(
-        ds,
-        drop_last=True,
-        batch_size=num_subjects_per_batch,
-        num_workers=num_loader_workers,
-    )
+        num_subjects,
+        l2norm,
+        scaler,
+        persistent_workers
+    ):
+        ds = FileDataset(
+            FEATURE_ROOT_DIR,
+            sample_info_list,
+            num_samples_per_subject=num_samples_per_subject,
+            l2norm=l2norm,
+            scaler=scaler,
+            selection_dir=None,
+        )
+        loader = torch_data.DataLoader(
+            ds,
+            drop_last=True,
+            batch_size=num_subjects,
+            num_workers=0,
+        )
+        return loader
 
     scaler = None
     if args.SCALER:
         assert False
+        loader = retrieve_dataloader(False, None, False)
         scaler = StandardScaler(copy=False)
         pbar = tqdm(total=len(loader), ascii=True, position=0)
         for batch_idx, batch_data in enumerate(loader):
@@ -189,53 +204,47 @@ if __name__ == "__main__":
             pbar.update()
         pbar.close()
 
-    # *
-    ds = FileDataset(
-        FEAT_ROOT_DIR,
-        subject_info_list,
-        num_samples_per_subject,
+    loader = retrieve_dataloader(
+        num_samples_per_subject=recipe["num_samples_per_subject"],
+        num_subjects=recipe["num_subjects_per_batch"],
         l2norm=True,
         scaler=scaler,
-        selection_dir=SELECTION_DIR,
-    )
-    loader = torch_data.DataLoader(
-        ds,
-        drop_last=True,
-        batch_size=num_subjects_per_batch,
-        num_workers=num_loader_workers,
-        persistent_workers=num_loader_workers > 0,
+        persistent_workers=True,
     )
 
-    for idx, num_clusters in enumerate([8, 16, 32]):
+    batch_size = recipe["num_samples_per_subject"] * recipe["num_subjects_per_batch"]
 
-        paramset = atlas_construct_template_kwargs.copy()
-        paramset["num_clusters"] = num_clusters
-        model = MiniBatchKMeans(
-            n_clusters=paramset["num_clusters"],
-            batch_size=paramset["batch_size"],
-            reassignment_ratio=paramset["reassignment_ratio"],
-            verbose=3,
-        )
-        convergence_context = {}
+    paramset = recipe.copy()
+    paramset["num_clusters"] = 8
+    paramset["batch_size"] = batch_size
 
-        iter_idx = 0
-        num_batches = len(loader)
-        num_iters = num_batches * num_epochs
-        for epoch in range(num_epochs):
-            logging.info(f"Epoch {epoch}")
-            pbar = tqdm(total=num_batches, ascii=True, position=0)
-            for batch_idx, batch_data in enumerate(loader):
-                batch_data = batch_data.numpy()
-                batch_data = np.reshape(batch_data, [batch_size, 2048])
-                model, isconverge = model.partial_fitX(
-                    batch_data, iter_idx, num_iters, batch_size
-                )
-                iter_idx += 1
-                pbar.update()
-            pbar.close()
-            # if isconverge and epoch >= num_epochs:
-            #     break
-        mkdir(f"{SAVE_DIR}/[method={idx}]/")
-        joblib.dump(model, f"{SAVE_DIR}/[method={idx}]/model.dat")
-        if scaler:
-            joblib.dump(scaler, f"{SAVE_DIR}/[method={idx}]/scaler.dat")
+    from h2t.extract.mining.mine import MiniBatchKMeansExtended
+    model = MiniBatchKMeansExtended(
+        n_clusters=paramset["num_clusters"],
+        batch_size=paramset["batch_size"],
+        reassignment_ratio=paramset["reassignment_ratio"],
+        verbose=3,
+    )
+
+    iter_idx = 0
+    num_epochs = 50
+    num_batches = len(loader)
+    num_iters = num_batches * num_epochs
+    for epoch in range(num_epochs):
+        log_info(f"Epoch {epoch}")
+        pbar = tqdm(total=num_batches, ascii=True, position=0)
+        for batch_idx, batch_data in enumerate(loader):
+            batch_data = batch_data.numpy()
+            batch_data = np.reshape(batch_data, [batch_size, 2048])
+            model, isconverge = model.partial_fitX(
+                batch_data, iter_idx, num_iters, batch_size
+            )
+            iter_idx += 1
+            pbar.update()
+        pbar.close()
+        # if isconverge and epoch >= num_epochs:
+        #     break
+    # mkdir(f"{SAVE_DIR}/[method={idx}]/")
+    # joblib.dump(model, f"{SAVE_DIR}/[method={idx}]/model.dat")
+    # if scaler:
+        # joblib.dump(scaler, f"{SAVE_DIR}/[method={idx}]/scaler.dat")
