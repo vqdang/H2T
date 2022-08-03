@@ -60,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--SPLIT_IDX", type=int, default=0)
     parser.add_argument("--CLUSTER_CODE", type=str, default="[method=None]")
     parser.add_argument("--ROOT_DATA", type=str, default="[rootData=tcga]")
+    parser.add_argument("--TASK_CODE", type=str, default="idc-lob")
     parser.add_argument("--SOURCE_TISSUE", type=str, default="[sourceTissue=None]")
     parser.add_argument(
         "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
@@ -79,8 +80,8 @@ if __name__ == "__main__":
     CLUSTER_CODE = args.CLUSTER_CODE
     ROOT_DATA = args.ROOT_DATA
     SOURCE_TISSUE = args.SOURCE_TISSUE
-    TASK_CODE = "idc-lob"
-    ARCH_CODE = "transformer-2"
+    TASK_CODE = args.TASK_CODE
+    ARCH_CODE = args.ARCH_CODE
 
     # * debug
     # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/clam.yml"
@@ -98,7 +99,13 @@ if __name__ == "__main__":
         f"{CLUSTER_CODE}/{TASK_CODE}/{ARCH_CODE}/"
     )
     TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/{ARCH_CODE}.yml"
-    SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga.dat"
+    if TASK_CODE == "idc-lob":
+        SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga.dat"
+    elif TASK_CODE == "idc-lob-ffpe":
+        SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga_ffpe.dat"
+    elif TASK_CODE == "ccrcc-prcc-chrcc":
+        SPLIT_INFO_PATH = f"{PWD}/data/splits/[ccrcc-prcc-chrcc]_train=tcga.dat"
+
     # *
 
     # rmdir(save_path)
@@ -168,6 +175,6 @@ if __name__ == "__main__":
         rm_n_mkdir(save_path_)
         run_one_split_with_param_set(save_path_, data_splits[args.SPLIT_IDX], {})
     else:
-        for split_idx, split_info in enumerate(data_split):
+        for split_idx, split_info in enumerate(data_splits):
             save_path_ = f"{SAVE_PATH}/{split_idx:02d}/"
             run_one_split_with_param_set(save_path_, split_info, {})
