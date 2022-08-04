@@ -12,8 +12,10 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from h2t.misc.utils import mkdir, load_yaml, log_info
+from h2t.misc.utils import mkdir, load_yaml, log_info, setup_logger, save_yaml
 from h2t.data.utils import retrieve_dataset_slide_info, retrieve_subset
+
+from h2t.extract.utils import load_sample_with_info
 
 
 class FileDataset(torch.utils.data.Dataset):
@@ -53,21 +55,14 @@ class FileDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.subject_info_list)
 
-    def _load(self, sample_info):
-        ds_code, wsi_code = sample_info
-
-        feature_path = f"{self.root_dir}/{ds_code}/{wsi_code}.features.npy"
-        patch_features = np.load(feature_path, mmap_mode="r")
-
-        if self.selection_dir is not None:
-            selection_path = f"{self.selection_dir}/{ds_code}/{wsi_code}.npy"
-            selections = np.load(selection_path)
-            patch_features = patch_features[selections > 0]
-        return patch_features
-
     def _getitem(self, idx):
         sample_info = self.subject_info_list[idx]
-        patch_features = self._load(sample_info)
+        patch_features = load_sample_with_info(
+            self.root_dir,
+            sample_info,
+            load_positions=False,
+            selection_dir=self.selection_dir,
+        )
 
         # ! if sampling size > upper range, over-sampling may happen
         sel = self.rng.integers(
@@ -115,7 +110,7 @@ def retrieve_dataloader(
     return loader
 
 
-def retrieve_scaler(recipe, selection_dir):
+def retrieve_scaler(sample_info_list, recipe, selection_dir):
     batch_size = recipe["batch_size"]
     loader = retrieve_dataloader(
         sample_info_list,
@@ -141,12 +136,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("--METHOD_CODE", type=str, default="sample")
-    parser.add_argument("--DATASET_CODE", type=str, default="tcga-lung-luad-lusc")
+    parser.add_argument("--SOURCE_DATASET", type=str, default="tcga-lung-luad-lusc")
     parser.add_argument(
         "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
     )
     parser.add_argument("--NUM_EPOCHS", type=int, default=25)
-    parser.add_argument("--SCALER", type=bool, default=True)
+    parser.add_argument("--SCALER", type=bool, default=False)
     parser.add_argument("--NUM_CLUSTERS", type=int, default=8)
 
     args = parser.parse_args()
@@ -154,22 +149,29 @@ if __name__ == "__main__":
 
     os.environ["OMP_NUM_THREADS"] = "1"
 
+    # *
+    METHOD_CODE = args.METHOD_CODE
+    FEATURE_CODE = args.FEATURE_CODE
+
     # * ----
 
     # PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
     # FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/[SWAV]-[mpp=0.50]-[512-256]/"
 
     PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-    os.environ["JOBLIB_TEMP_FOLDER"] = "exp_output/storage/a100/cache/"
+    os.environ["JOBLIB_TEMP_FOLDER"] = f"{PWD}/experiments/debug/cache/"
 
-    DATASET_CODE = args.DATASET_CODE
+    SOURCE_DATASET = args.SOURCE_DATASET
     SELECTION_DIR = None
     FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
     CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
+    RECIPE_PATH = f"{PWD}/extract/params/spherical_kmean.yaml"
 
-    SAVE_DIR = (
-        f"{PWD}/experiments/remote/clustering/{METHOD_CODE}/{DATASET_CODE}/{FEATURE_CODE}/"
-    )
+    # SAVE_DIR = (
+    #     f"{PWD}/experiments/remote/clustering/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    # )
+
+    SAVE_DIR = f"{PWD}/experiments/debug/cluster/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
 
     mkdir(SAVE_DIR)
     setup_logger(f"{SAVE_DIR}/debug.log")
@@ -188,8 +190,8 @@ if __name__ == "__main__":
         # "tcga/kidney/frozen",
     ]
 
-    DATASET_CONFIG = load_yaml(f"{PWD}/mining/")
-    DATASET_CONFIG = DATASET_CONFIG[DATASET_CODE]
+    DATASET_CONFIG = load_yaml(f"{PWD}/extract/config.yaml")
+    DATASET_CONFIG = DATASET_CONFIG[SOURCE_DATASET]
 
     dataset_sample_info = retrieve_dataset_slide_info(
         CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
@@ -208,12 +210,13 @@ if __name__ == "__main__":
     recipe["num_patterns"] = (
         args.NUM_CLUSTERS if recipe["num_patterns"] is None else recipe["num_patterns"]
     )
+    save_yaml(f"{SAVE_DIR}/config.yaml", recipe)
 
     # * Instantiate related objects
     rng_seeder = np.random.PCG64(recipe["random_seed"])
     rng_seeder = np.random.Generator(rng_seeder)
 
-    from h2t.extract.mining.mine import (
+    from h2t.extract.mine import (
         ExtendedMiniBatchKMeans as BatchKmeans,
         ExtendedMiniBatchDictionaryLearning as BatchDictionaryLearning,
     )
@@ -236,11 +239,13 @@ if __name__ == "__main__":
     # *
 
     scaler = (
-        retrieve_scaler(sample_info_list, args, SELECTION_DIR)
-        if args.SCALER else None
+        retrieve_scaler(sample_info_list, recipe, SELECTION_DIR)
+        if args.SCALER
+        else None
     )
 
     loader = retrieve_dataloader(
+        sample_info_list,
         num_samples_per_subject=recipe["num_samples_per_subject"],
         num_subjects=recipe["num_subjects_per_batch"],
         l2norm=True,
