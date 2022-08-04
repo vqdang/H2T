@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from h2t.misc.utils import mkdir, load_yaml, log_info
+from h2t.data.utils import retrieve_dataset_slide_info, retrieve_subset
 
 
 class FileDataset(torch.utils.data.Dataset):
@@ -89,7 +90,13 @@ class FileDataset(torch.utils.data.Dataset):
 
 
 def retrieve_dataloader(
-    num_samples_per_subject, num_subjects, l2norm, scaler, persistent_workers
+    sample_info_list,
+    num_samples_per_subject,
+    num_subjects,
+    l2norm,
+    scaler,
+    persistent_workers,
+    selection_dir,
 ):
     ds = FileDataset(
         FEATURE_ROOT_DIR,
@@ -97,12 +104,35 @@ def retrieve_dataloader(
         num_samples_per_subject=num_samples_per_subject,
         l2norm=l2norm,
         scaler=scaler,
-        selection_dir=None,
+        selection_dir=selection_dir,
     )
     loader = torch_data.DataLoader(
-        ds, drop_last=True, batch_size=num_subjects, num_workers=0,
+        ds,
+        drop_last=True,
+        batch_size=num_subjects,
+        num_workers=0,
     )
     return loader
+
+
+def retrieve_scaler(recipe, selection_dir):
+    batch_size = recipe["batch_size"]
+    loader = retrieve_dataloader(
+        sample_info_list,
+        num_samples_per_subject=recipe["num_samples_per_subject"],
+        num_subjects=recipe["num_subjects_per_batch"],
+        l2norm=False,
+        scaler=None,
+        persistent_workers=False,
+        selection_dir=SELECTION_DIR,
+    )
+    scaler = StandardScaler(copy=False)
+    loader_pbar = tqdm(iterable=loader, total=len(loader), ascii=True, position=0)
+    for batch_idx, batch_data in enumerate(loader_pbar):
+        batch_data = batch_data.numpy()
+        batch_data = np.reshape(batch_data, [batch_size, -1])
+        scaler.partial_fit(batch_data)
+    return scaler
 
 
 ####
@@ -110,10 +140,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("--ATLAS_ROOT_DATA", type=str, default="[rootData=tcga]")
-    parser.add_argument(
-        "--ATLAS_SOURCE_TISSUE", type=str, default="[sourceTissue=Normal+LUAD+LUSC]"
-    )
+    parser.add_argument("--METHOD_CODE", type=str, default="sample")
+    parser.add_argument("--DATASET_CODE", type=str, default="tcga-lung-luad-lusc")
     parser.add_argument(
         "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
     )
@@ -125,39 +153,27 @@ if __name__ == "__main__":
     print(args)
 
     os.environ["OMP_NUM_THREADS"] = "1"
-    os.environ["JOBLIB_TEMP_FOLDER"] = "exp_output/storage/a100/cache/"
-    # os.environ['JOBLIB_TEMP_FOLDER'] = 'exp_output/storage/nima/cache/'
 
     # * ----
-    FEATURE_CODE = args.FEATURE_CODE
-    ATLAS_ROOT_DATA = args.ATLAS_ROOT_DATA
-    ATLAS_SOURCE_TISSUE = args.ATLAS_SOURCE_TISSUE
-
-    THRESHOLD = 0.5
-    WORKSPACE_DIR = "exp_output/storage/a100/"
-    # WORKSPACE_DIR = 'exp_output/storage/nima/'
-    FEAT_ROOT_DIR = f"{WORKSPACE_DIR}/features/{FEATURE_CODE}/"
-    SELECTION_DIR = (
-        f"{WORKSPACE_DIR}/features/mpp=0.25/" f"selections-{THRESHOLD:0.2f}/"
-    )
-    SAVE_DIR = (
-        f"{WORKSPACE_DIR}/cluster_filtered-{THRESHOLD:0.2f}/"
-        # f'/ablation/[epochs={args.NUM_EPOCHS}]/'
-        f"{ATLAS_SOURCE_TISSUE}/{FEATURE_CODE}/{ATLAS_ROOT_DATA}/"
-        # f'{WORKSPACE_DIR}/dump/cluster/'
-    )
-    # * ----
-
-    # mkdir(SAVE_DIR)
-
-    from h2t.data.utils import retrieve_dataset_slide_info, retrieve_subset
 
     # PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
     # FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/[SWAV]-[mpp=0.50]-[512-256]/"
 
     PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
+    os.environ["JOBLIB_TEMP_FOLDER"] = "exp_output/storage/a100/cache/"
+
+    DATASET_CODE = args.DATASET_CODE
+    SELECTION_DIR = None
+    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
     CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
+
+    SAVE_DIR = (
+        f"{PWD}/experiments/remote/clustering/{METHOD_CODE}/{DATASET_CODE}/{FEATURE_CODE}/"
+    )
+
+    mkdir(SAVE_DIR)
+    setup_logger(f"{SAVE_DIR}/debug.log")
+    # * ---
 
     dataset_identifiers = [
         "tcga/lung/ffpe/lscc",
@@ -172,10 +188,7 @@ if __name__ == "__main__":
         # "tcga/kidney/frozen",
     ]
 
-    DATASET_CODE = "tcga-lung-luad-lusc"
-    DATASET_CONFIG = load_yaml(
-        "/mnt/storage_0/workspace/h2t/h2t/extract/mining/config.yaml"
-    )
+    DATASET_CONFIG = load_yaml(f"{PWD}/mining/")
     DATASET_CONFIG = DATASET_CONFIG[DATASET_CODE]
 
     dataset_sample_info = retrieve_dataset_slide_info(
@@ -185,9 +198,7 @@ if __name__ == "__main__":
 
     # * Parsing the config
     default_seed = 5
-    recipe = load_yaml(
-        "/mnt/storage_0/workspace/h2t/h2t/extract/mining/params/spherical_kmean.yaml"
-    )
+    recipe = load_yaml(RECIPE_PATH)
     recipe["batch_size"] = (
         recipe["num_samples_per_subject"] * recipe["num_subjects_per_batch"]
     )
@@ -224,23 +235,10 @@ if __name__ == "__main__":
 
     # *
 
-    scaler = None
-    if args.SCALER:
-        batch_size = recipe["batch_size"]
-        loader = retrieve_dataloader(
-            num_samples_per_subject=recipe["num_samples_per_subject"],
-            num_subjects=recipe["num_subjects_per_batch"],
-            l2norm=False,
-            scaler=None,
-            persistent_workers=False,
-        )
-        scaler = StandardScaler(copy=False)
-        loader_pbar = tqdm(iterable=loader, total=len(loader), ascii=True, position=0)
-        for batch_idx, batch_data in enumerate(loader_pbar):
-            batch_data = batch_data.numpy()
-            batch_data = np.reshape(batch_data, [batch_size, -1])
-            scaler.partial_fit(batch_data)
-        print("here")
+    scaler = (
+        retrieve_scaler(sample_info_list, args, SELECTION_DIR)
+        if args.SCALER else None
+    )
 
     loader = retrieve_dataloader(
         num_samples_per_subject=recipe["num_samples_per_subject"],
@@ -248,6 +246,7 @@ if __name__ == "__main__":
         l2norm=True,
         scaler=scaler,
         persistent_workers=True,
+        selection_dir=SELECTION_DIR,
     )
 
     iter_idx = 0
@@ -270,7 +269,7 @@ if __name__ == "__main__":
         if isconverge and epoch >= num_epochs:
             break
 
-        mkdir(f"{SAVE_DIR}/[method={idx}]/")
-        joblib.dump(model, f"{SAVE_DIR}/[method={idx}]/model.dat")
+        mkdir(f"{SAVE_DIR}/")
+        joblib.dump(model, f"{SAVE_DIR}/model.dat")
         if scaler:
-            joblib.dump(scaler, f"{SAVE_DIR}/[method={idx}]/scaler.dat")
+            joblib.dump(scaler, f"{SAVE_DIR}/scaler.dat")
