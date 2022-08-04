@@ -1,14 +1,19 @@
 import numpy as np
+
 from sklearn.utils import check_array
+
 from sklearn.cluster import MiniBatchKMeans
+
 from sklearn.cluster._kmeans import _mini_batch_step, _labels_inertia_threadpool_limit
 from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 from sklearn.utils.extmath import row_norms
 from sklearn.utils.fixes import threadpool_limits
 from sklearn.utils.validation import _check_sample_weight, check_random_state
 
+from sklearn.decomposition import MiniBatchDictionaryLearning
 
-class MiniBatchKMeansExtended(MiniBatchKMeans):
+
+class ExtendedMiniBatchKMeans(MiniBatchKMeans):
     def partial_fit(
         self,
         X,
@@ -135,40 +140,152 @@ class MiniBatchKMeansExtended(MiniBatchKMeans):
             return self, is_converge
         return self
 
+    def prototypical_patterns(self):
+        return np.copy(self.cluster_centers_)
+
+
+class ExtendedMiniBatchDictionaryLearning(MiniBatchDictionaryLearning):
+    def partial_fit(
+        self,
+        X,
+        y=None,
+        # Additional arguments to calculate the
+        # convergence condition in-place
+        # step, n_steps, n_samples = check_convergence
+        check_convergence=None,
+    ):
+        """Update dictionary based on a single mini-batch X.
+
+        This extends the original `MiniBatchDictionaryLearning` to include
+        convergence checking with respect to external step metadata.
+
+        Args:
+            check_convergence (tuple): A tuple that contains the current
+                step `partial_fit` metadata. It is expected to be of the
+                form `check_convergence = (step, n_steps, n_samples)` where
+
+                - `step` is the index of the current optimization step (or n-th
+                call of `partial_fit`).
+
+                - `n_steps` is the total number of optimization step to be done.
+
+                - `n_samples`: By denoting the data consumed by each `partial_fit`
+                call a mini batch, `n_samples` denote the total number of sample
+                in the dataset where these mini batches come from.
+
+                By default, `check_convergence = None` and the checking is not
+                performed.
+
+        """
+        if check_convergence is not None and check_convergence[0] == 0:
+            # Attributes to monitor the convergence
+            self._ewa_cost = None
+            self._ewa_cost_min = None
+            self._no_improvement = 0
+
+        has_components = hasattr(self, "components_")
+
+        X = self._validate_data(
+            X, dtype=[np.float64, np.float32], order="C", reset=not has_components
+        )
+
+        self.n_steps_ = getattr(self, "n_steps_", 0)
+
+        if not has_components:
+            # This instance has not been fitted yet (fit or partial_fit)
+            self._check_params(X)
+            self._random_state = check_random_state(self.random_state)
+
+            dictionary = self._initialize_dict(X, self._random_state)
+
+            self._inner_stats = (
+                np.zeros((self._n_components, self._n_components), dtype=X.dtype),
+                np.zeros((X.shape[1], self._n_components), dtype=X.dtype),
+            )
+        else:
+            dictionary = self.components_
+
+        batch_cost = self._minibatch_step(
+            X, dictionary, self._random_state, self.n_steps_
+        )
+
+        self.components_ = dictionary
+        self.n_steps_ += 1
+
+        # Monitor convergence and do early stopping if necessary
+        if check_convergence is not None:
+            step, n_steps, n_samples = check_convergence
+            old_dictionary = dictionary
+            new_dictionary = self.components_
+            # print(old_dictionary)
+            # print(new_dictionary)
+            is_converge = self._check_convergence(
+                X, batch_cost, new_dictionary, old_dictionary, n_samples, step, n_steps
+            )
+            return self, is_converge
+        return self
+
+    def prototypical_patterns(self):
+        return np.copy(self.components_)
+
 
 if __name__ == "__main__":
-    # X = np.array(
-    #     [
-    #         [1, 2],
-    #         [1, 4],
-    #         [1, 0],
-    #         [4, 2],
-    #         [4, 0],
-    #         [4, 4],
-    #         [4, 5],
-    #         [0, 1],
-    #         [2, 2],
-    #         [3, 2],
-    #         [5, 5],
-    #         [1, -1],
-    #     ]
-    # )
-    # # manually fit on batches
-    # kmeans = MiniBatchKMeansExtended(n_clusters=2, random_state=0, batch_size=6)
-    # check_convergence = [0, 5, X.shape[0]]
-    # kmeans, is_converged = kmeans.partial_fit(X[0:6, :], check_convergence=check_convergence)
-    # print(is_converged)
-    # check_convergence = [1, 5, X.shape[0]]
-    # kmeans, is_converged = kmeans.partial_fit(X[6:12, :], check_convergence=check_convergence)
-    # print(is_converged)
-    # check_convergence = [2, 5, X.shape[0]]
-    # kmeans, is_converged = kmeans.partial_fit(X[4:10, :], check_convergence=check_convergence)
-    # print(is_converged)
+    """Local code to test implementations"""
 
-    # kmeans.cluster_centers_
-    # kmeans.predict([[0, 0], [4, 4]])
-    # # fit on the whole data
-    # kmeans = MiniBatchKMeans(n_clusters=2, random_state=0, batch_size=6, max_iter=10).fit(X)
-    # kmeans.cluster_centers_
-    # kmeans.predict([[0, 0], [4, 4]])
+    X = np.array(
+        [
+            [1, 2],
+            [1, 4],
+            [1, 0],
+            [4, 2],
+            [4, 0],
+            [4, 4],
+            [4, 5],
+            [0, 1],
+            [2, 2],
+            [3, 2],
+            [5, 5],
+            [1, -1],
+        ]
+    )
+
+    # manually fit on batches
+    num_steps = 128
+    num_samples = X.shape[0]
+    batch_size = 6
+    seed = 5
+    np.random.seed(seed)
+
+    model_name = "dictionary"
+    if model_name == "kmean":
+        model = ExtendedMiniBatchKMeans(
+            n_clusters=2, random_state=0, batch_size=batch_size
+        )
+        base_model = MiniBatchKMeans(
+            n_clusters=2, random_state=0, batch_size=batch_size
+        )
+    elif model_name == "dictionary":
+        model = ExtendedMiniBatchDictionaryLearning(
+            n_components=2, random_state=0, batch_size=6
+        )
+        base_model = MiniBatchDictionaryLearning(
+            n_components=2, random_state=0, batch_size=6
+        )
+
+    for step in range(num_steps):
+        x_batch = np.random.randint(0, num_samples, batch_size)
+        x_batch = X[x_batch]
+        check_convergence = [step, num_steps, num_samples]
+        model, is_converged = model.partial_fit(
+            x_batch, check_convergence=check_convergence
+        )
+        base_model = base_model.partial_fit(x_batch)
+        if model_name == "kmean":
+            print(
+                is_converged,
+                np.sum(base_model.cluster_centers_ - model.cluster_centers_),
+            )
+        elif model_name == "dictionary":
+            print(is_converged, np.sum(base_model.components_ - model.components_))
+
     print("here")
