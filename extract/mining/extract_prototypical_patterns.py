@@ -69,7 +69,9 @@ class FileDataset(torch.utils.data.Dataset):
         patch_features = self._load(sample_info)
 
         # ! if sampling size > upper range, over-sampling may happen
-        sel = self.rng.integers(0, patch_features.shape[0], size=self.num_samples_per_subject)
+        sel = self.rng.integers(
+            0, patch_features.shape[0], size=self.num_samples_per_subject
+        )
         patch_features = np.array(patch_features[sel])
         patch_features = np.squeeze(patch_features)
 
@@ -86,6 +88,23 @@ class FileDataset(torch.utils.data.Dataset):
         return self._getitem(idx)
 
 
+def retrieve_dataloader(
+    num_samples_per_subject, num_subjects, l2norm, scaler, persistent_workers
+):
+    ds = FileDataset(
+        FEATURE_ROOT_DIR,
+        sample_info_list,
+        num_samples_per_subject=num_samples_per_subject,
+        l2norm=l2norm,
+        scaler=scaler,
+        selection_dir=None,
+    )
+    loader = torch_data.DataLoader(
+        ds, drop_last=True, batch_size=num_subjects, num_workers=0,
+    )
+    return loader
+
+
 ####
 if __name__ == "__main__":
     import argparse
@@ -99,7 +118,8 @@ if __name__ == "__main__":
         "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
     )
     parser.add_argument("--NUM_EPOCHS", type=int, default=25)
-    parser.add_argument("--SCALER", type=bool, default=False)
+    parser.add_argument("--SCALER", type=bool, default=True)
+    parser.add_argument("--NUM_CLUSTERS", type=int, default=8)
 
     args = parser.parse_args()
     print(args)
@@ -153,56 +173,74 @@ if __name__ == "__main__":
     ]
 
     DATASET_CODE = "tcga-lung-luad-lusc"
-    DATASET_CONFIG = load_yaml("/mnt/storage_0/workspace/h2t/h2t/extract/mining/config.yaml")
+    DATASET_CONFIG = load_yaml(
+        "/mnt/storage_0/workspace/h2t/h2t/extract/mining/config.yaml"
+    )
     DATASET_CONFIG = DATASET_CONFIG[DATASET_CODE]
 
     dataset_sample_info = retrieve_dataset_slide_info(
         CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
     )
     sample_info_list, _ = retrieve_subset(DATASET_CONFIG, dataset_sample_info)
-    # *
 
-    seed = 5
+    # * Parsing the config
+    default_seed = 5
+    recipe = load_yaml(
+        "/mnt/storage_0/workspace/h2t/h2t/extract/mining/params/spherical_kmean.yaml"
+    )
+    recipe["batch_size"] = (
+        recipe["num_samples_per_subject"] * recipe["num_subjects_per_batch"]
+    )
+    recipe["random_seed"] = (
+        default_seed if recipe["random_seed"] is None else recipe["random_seed"]
+    )
+    recipe["num_patterns"] = (
+        args.NUM_CLUSTERS if recipe["num_patterns"] is None else recipe["num_patterns"]
+    )
 
-    recipe = load_yaml("/mnt/storage_0/workspace/h2t/h2t/extract/mining/params/spherical_kmean.yaml")
-    rng_seeder = np.random.Generator(np.random.PCG64(seed))
+    # * Instantiate related objects
+    rng_seeder = np.random.PCG64(recipe["random_seed"])
+    rng_seeder = np.random.Generator(rng_seeder)
 
-    # *
-    def retrieve_dataloader(
-        num_samples_per_subject,
-        num_subjects,
-        l2norm,
-        scaler,
-        persistent_workers
-    ):
-        ds = FileDataset(
-            FEATURE_ROOT_DIR,
-            sample_info_list,
-            num_samples_per_subject=num_samples_per_subject,
-            l2norm=l2norm,
-            scaler=scaler,
-            selection_dir=None,
+    from h2t.extract.mining.mine import (
+        ExtendedMiniBatchKMeans as BatchKmeans,
+        ExtendedMiniBatchDictionaryLearning as BatchDictionaryLearning,
+    )
+
+    if recipe["clustering_method"] == "spherical_kmeans":
+        model = BatchKmeans(
+            verbose=3,
+            n_clusters=recipe["num_patterns"],
+            batch_size=recipe["batch_size"],
+            **recipe["clustering_kwargs"],
         )
-        loader = torch_data.DataLoader(
-            ds,
-            drop_last=True,
-            batch_size=num_subjects,
-            num_workers=0,
+    elif recipe["clustering_method"] == "dictionary":
+        model = BatchDictionaryLearning(
+            verbose=3,
+            n_components=recipe["num_clusters"],
+            batch_size=recipe["batch_size"],
+            **recipe["clustering_kwargs"],
         )
-        return loader
+
+    # *
 
     scaler = None
     if args.SCALER:
-        assert False
-        loader = retrieve_dataloader(False, None, False)
+        batch_size = recipe["batch_size"]
+        loader = retrieve_dataloader(
+            num_samples_per_subject=recipe["num_samples_per_subject"],
+            num_subjects=recipe["num_subjects_per_batch"],
+            l2norm=False,
+            scaler=None,
+            persistent_workers=False,
+        )
         scaler = StandardScaler(copy=False)
-        pbar = tqdm(total=len(loader), ascii=True, position=0)
-        for batch_idx, batch_data in enumerate(loader):
+        loader_pbar = tqdm(iterable=loader, total=len(loader), ascii=True, position=0)
+        for batch_idx, batch_data in enumerate(loader_pbar):
             batch_data = batch_data.numpy()
-            batch_data = np.reshape(batch_data, [batch_size, 2048])
+            batch_data = np.reshape(batch_data, [batch_size, -1])
             scaler.partial_fit(batch_data)
-            pbar.update()
-        pbar.close()
+        print("here")
 
     loader = retrieve_dataloader(
         num_samples_per_subject=recipe["num_samples_per_subject"],
@@ -212,39 +250,27 @@ if __name__ == "__main__":
         persistent_workers=True,
     )
 
-    batch_size = recipe["num_samples_per_subject"] * recipe["num_subjects_per_batch"]
-
-    paramset = recipe.copy()
-    paramset["num_clusters"] = 8
-    paramset["batch_size"] = batch_size
-
-    from h2t.extract.mining.mine import MiniBatchKMeansExtended
-    model = MiniBatchKMeansExtended(
-        n_clusters=paramset["num_clusters"],
-        batch_size=paramset["batch_size"],
-        reassignment_ratio=paramset["reassignment_ratio"],
-        verbose=3,
-    )
-
     iter_idx = 0
-    num_epochs = 50
+    batch_size = recipe["batch_size"]
+    num_epochs = recipe["num_epochs"]
     num_batches = len(loader)
     num_iters = num_batches * num_epochs
+
     for epoch in range(num_epochs):
         log_info(f"Epoch {epoch}")
-        pbar = tqdm(total=num_batches, ascii=True, position=0)
+        pbar = tqdm(iterable=loader, total=num_batches, ascii=True, position=0)
         for batch_idx, batch_data in enumerate(loader):
             batch_data = batch_data.numpy()
-            batch_data = np.reshape(batch_data, [batch_size, 2048])
-            model, isconverge = model.partial_fitX(
-                batch_data, iter_idx, num_iters, batch_size
+            batch_data = np.reshape(batch_data, [batch_size, -1])
+            model, isconverge = model.partial_fit(
+                batch_data, check_convergence=[iter_idx, num_iters, batch_size]
             )
             iter_idx += 1
-            pbar.update()
-        pbar.close()
-        # if isconverge and epoch >= num_epochs:
-        #     break
-    # mkdir(f"{SAVE_DIR}/[method={idx}]/")
-    # joblib.dump(model, f"{SAVE_DIR}/[method={idx}]/model.dat")
-    # if scaler:
-        # joblib.dump(scaler, f"{SAVE_DIR}/[method={idx}]/scaler.dat")
+
+        if isconverge and epoch >= num_epochs:
+            break
+
+        mkdir(f"{SAVE_DIR}/[method={idx}]/")
+        joblib.dump(model, f"{SAVE_DIR}/[method={idx}]/model.dat")
+        if scaler:
+            joblib.dump(scaler, f"{SAVE_DIR}/[method={idx}]/scaler.dat")
