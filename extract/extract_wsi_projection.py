@@ -1,254 +1,432 @@
 import argparse
-import copy
-import glob
 import itertools
-import json
-import logging
-import math
-import os
 import re
-import pathlib
-import tarfile
-from collections import OrderedDict
-from io import BytesIO
 
 import joblib
 import numpy as np
+from sklearn.neighbors import KDTree
 
-from misc.utils import (log_info, mkdir, multiproc_dispatcher, recur_find_ext,
-                        rm_n_mkdir, rmdir)
-
-def load_subject(run_idx, wsi_code, load_features=False):
-
-    # * tar container
-    # tar_path = f'{pathlib.Path(position_path).parent}.tar'
-    # tar = tarfile.open(tar_path)
-    # path_in_tar = f'./{pathlib.Path(position_path).name}'
-    # bounds = load_npy_tar(tar, path_in_tar).tolist()
-    # features = None
-    # if features_path is not None:
-    #     path_in_tar = f'./{pathlib.Path(features_path).name}'
-    #     features = np.squeeze(load_npy_tar(tar, path_in_tar))
-    # tar.close()
-    # * normal path
-    root_path = f'{FEATURE_ROOT_DIR}/{wsi_code}'
-    features = (
-        np.load(f'{root_path}.features.npy', mmap_mode='r')
-        if load_features else None
-    )
-    path = f'{root_path}.position.npy'
-    position = np.load(path)
-    
-    root_path = f'{TRANSFORMED_DIR}/{wsi_code}'
-    labels = np.load(f'{root_path}.label.npy')
-    distances = np.load(f'{root_path}.dist.npy')
-
-    selection_path = f'{SELECTION_ROOT_DIR}/{wsi_code}.npy'
-    selections = np.load(selection_path)
-    position, features, labels, distances = [
-        v[selections > 0] if v is not None else None
-        for v in [position, features, labels, distances]
-    ]
-
-    return run_idx, position, features, labels, distances
+from h2t.extract.features.graph import KNNFeatures
+from h2t.misc.utils import (
+    load_yaml,
+    log_info,
+    mkdir,
+    dispatch_processing,
+    recur_find_ext,
+    rm_n_mkdir,
+    rmdir,
+)
+from h2t.extract.utils import load_sample_with_info, normalize_positions
 
 
-def process_one_subject(
-        run_id,
-        wsi_code,
-        out_path, 
-        feat_mode,
-        num_types=8,
-        scaler=None):
+class Selector:
+    def furthest_to_patterns(self, distances, topk: int):
+        """Return topk indices of items having furthest distance.
 
-    load_features = 'dH' in feat_mode
-    _, bounds, features, labels, distances = (
-        load_subject(0, wsi_code, load_features)
-    )
-    # if scaler is not None:
-    #     features = np.squeeze(features)
-    #     features = scaler.transform(features, copy=True)
-    #     features = features[:, :, None, None]
+        Args:
+            distances: An array of shape `(N, P)` where `N` is the
+                the number of sample and `P` is the number of the
+                patterns.
 
-    # ! this is hardcoded
-    # normalize position and only use topleft
-    positions = np.array(bounds)[:, :2] / 256
-    assert num_types > np.max(labels), np.unique(labels)
+        Return:
+            np.ndarray: An array of selected indices within `distances`
 
-    all_types = np.arange(0, num_types)
-    src_list = np.unique(all_types)
-    dst_list = np.unique(all_types)
-    pair_list = list(itertools.product(src_list, dst_list))
+        """
+        # may not be in sorted order, k-smallest value
+        topk = min(topk, distances.shape[0] - 1)
+        sel = np.argpartition(-distances, topk)[:topk]
+        return sel
 
-    mode_codes = feat_mode.split('-')
-    if mode_codes[0] == 'H':
+    def closest_to_patterns(self, distances, topk: int):
+        """Return topk indices of items having smallest distance.
+
+        Args:
+            distances: An array of shape `(N, P)` where `N` is the
+                the number of sample and `P` is the number of the
+                patterns.
+
+        Return:
+            np.ndarray: An array of selected indices within `distances`
+
+        """
+        # may not be in sorted order, k-smallest value
+        topk = min(topk, distances.shape[0] - 1)
+        sel = np.argpartition(distances, topk)[:topk]
+        return sel
+
+    def outside_distance_to_pattern(self, distances, threshold: float):
+        """Return indices of items having distance larger than threshold.
+
+        Args:
+            distances: An array of shape `(N, P)` where `N` is the
+                the number of sample and `P` is the number of the
+                patterns.
+
+        Return:
+            np.ndarray: An array of selected indices within `distances`
+
+        """
+        sel = distances > threshold
+        return np.nonzero(sel)[0]
+
+    def run(self, distances, mode):
+        if "fk" in mode:
+            opt = int(mode.replace("fk", ""))
+            return self.furthest_to_patterns(distances, opt)
+        elif "k" in mode:
+            opt = int(mode.replace("k", ""))
+            return self.closest_to_patterns(distances, opt)
+        elif "t" in mode:
+            opt = float(mode.replace("t", ""))
+            return self.outside_distance_to_pattern(distances, opt)
+        elif "n" == mode:
+            return np.arange(distances.shape[0])
+        else:
+            assert False
+
+
+class Combinator:
+    def run(self, features, distances, mode):
+        distances = distances[:, None]
+        if "wn" in mode:
+            combined = np.mean(features * distances, axis=0)
+        elif "w" in mode:
+            combined = np.mean(features * (1.0 - distances), axis=0)
+        elif "m" in mode:
+            combined = np.mean(features, axis=0)
+        else:
+            assert False
+        return combined
+
+
+class WSIProjector(object):
+    def __init__(
+        self, feature_dir=None, cluster_dir=None, selection_dir=None, num_patterns=None
+    ):
+        self.feature_dir = feature_dir
+        self.cluster_dir = cluster_dir
+        self.selection_dir = selection_dir
+        self.num_patterns = num_patterns
+
+    def pattern_histogram(self, labels):
+        """Return the counting of each unique types.
+
+        Args:
+            labels (np.ndarray): Array of shape `(num_patches,)`
+                where each value is the assigned pattern id in integer
+                to the patch at the same index.
+
+        Returns:
+            np.ndarray: Histogram of unique values in `labels`
+                with respect to a set of unique value in range
+                `[0, self.num_patterns]`.
+
+        """
         nn_type_list = labels
-        (
-            unique_type_list,
-            nn_type_frequency,
-        ) = np.unique(nn_type_list, return_counts=True)
-        # repopulate for information wrt provided type because the
+        (unique_type_list, nn_type_frequency,) = np.unique(
+            nn_type_list, return_counts=True
+        )
+        # repopulate for information w.r.t provided type because the
         # subject may not contain all possible types within the
         # image/subject/dataset
-        unique_type_freqency = np.zeros(len(all_types))
+        unique_type_freqency = np.zeros(self.num_patterns)
         unique_type_freqency[unique_type_list] = nn_type_frequency
         xfeat = unique_type_freqency / np.sum(unique_type_freqency)
-    elif mode_codes[0] == 'C':
+        return xfeat
+
+    def pattern_colocalization(self, labels, bounds):
+        """Return summarized statistics about the pairwise
+        co-occurence of patterns.
+
+        Args:
+            bounds (np.ndarray): Array of shape `(num_patches, bounds)`
+                where bounds are `(top_left_x, top_left_y, bot_right_x, bot_right_y)`.
+            labels (np.ndarray): Array of shape `(num_patches,)`
+                where each value is the assigned pattern id in integer
+                to the patch at the same index.
+
+        """
+        positions = normalize_positions(bounds)[:, :2]
+
+        pattern_uids = np.arange(0, self.num_patterns)
+        pattern_pairs = list(itertools.product(pattern_uids, pattern_uids))
+
         # immediate neighbor (3x3)
         kdtree = KDTree(positions)
         fxtor = KNNFeatures(
-                    kdtree=kdtree,
-                    pair_list=pair_list,
-                    unique_type_list=all_types)
-        stats = fxtor.transform(positions, labels, radius=2)
-        xfeat = stats
-    elif mode_codes[0] == 'dH':
-        type_avg_feats = []
-        for type_id in all_types:
-            type_dists = distances[..., type_id]
-            if 'fk' in feat_mode:
-                # furthest k-patches
-                topk = re.findall(r'.*fk([0-9]*).*', feat_mode)
-                assert len(topk) == 1
-                # may not be in sorted order, k-smallest value
-                topk = min(int(topk[0]), type_dists.shape[0]-1)
-                sel = np.argpartition(-type_dists, topk)[:topk]
-            elif 'k' in feat_mode:
-                # nearest k-patches
-                topk = re.findall(r'.*k([0-9]*).*', feat_mode)
-                assert len(topk) == 1
-                # may not be in sorted order, k-smallest value
-                topk = min(int(topk[0]), type_dists.shape[0]-1)
-                sel = np.argpartition(type_dists, topk)[:topk]
-            else:
-                sel = labels == type_id
+            kdtree=kdtree, pair_list=pattern_pairs, unique_type_list=pattern_uids
+        )
+        xfeat = fxtor.transform(positions, labels, radius=2)
+        return xfeat
 
-            feats = (
-                features[sel] if np.sum(sel) > 0
-                else np.zeros([1, *features[0].shape])
-            )
-            feats = np.array(feats)
+    def montage_patterns(self, labels, bounds):
+        """Assemble labels in 1D form back to the 2D form.
+        
+        Return:
+            np.ndarray: 2D image of `labels`, value `0` denote
+                locations that do not exist in `bounds`. Original
+                values in `labels` are shifted by 1.
 
-            dists = (
-                type_dists[sel] if np.sum(sel) > 0
-                else np.zeros([1])
-            )
-            if 't' in feat_mode:
-                pattern = r'[-+]?\d*\.\d+|\d+'  # pattern for float
-                threshold = re.findall(pattern, feat_mode)
-                assert len(threshold) == 1
-                threshold = float(threshold[0])
-                sel = dists > threshold
-                feats = (
-                    feats[sel] if np.sum(sel) > 0
-                    else np.zeros([1, *feats[0].shape])
-                )
-                dists = (
-                    dists[sel] if np.sum(sel) > 0
-                    else np.zeros([1])
-                )
-                # print('here')
+        """
+        assert np.min(labels) >= 0
 
-            if 'wn' in feat_mode:
-                dists = dists[:, None, None, None]
-                type_feats = np.mean(feats * dists, axis=0)
-            elif 'w' in feat_mode:
-                dists = 1.0 - dists[:, None, None, None]
-                type_feats = np.mean(feats * dists, axis=0)
-            else:
-                type_feats = np.mean(feats, axis=0)
-            type_avg_feats.append(type_feats)
-        type_avg_feats = np.stack(type_avg_feats, axis=0)
-        xfeat = type_avg_feats
-    else:
-        assert False, feat_mode
+        positions = normalize_positions(bounds)[:, :2]
+        w, h = np.max(positions, axis=0)
+        canvas = np.full((h+1, w+1), -1, dtype=np.int32)
+        # -1 to denote background and to prevent overwriting exisitng
+        # location with label 0 in `labels`
+        canvas[positions[:, 1], positions[:, 0]] = labels
+        canvas += 1  # shift up so that background is zero
+        return canvas
 
-    xfeat = xfeat.astype(np.float32)
-    np.save(out_path, xfeat)
-    return run_id, None
+    def deep_feature_projection(self, labels, features, distances, options):
+        """
+        Args:
+            distances (np.ndarray): Array of shape `(num_patches, num_patterns)`
+                where each row is the distance of the sample at the same index
+                to all patterns.
+            features (np.ndarray): Array of shape `(num_patches, num_features)`
+                where each row is the distance of the sample at the same index
+                to all patterns.
 
-####
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--SUBSET_CODE', type=str, default='CPTAC-LUAD')
-    parser.add_argument('--CLUSTER_CODE', type=str, default='[method=1]')
-    parser.add_argument('--ATLAS_ROOT_DATA', type=str, default='[rootData=tcga]')
-    # parser.add_argument('--ATLAS_SOURCE_TISSUE', type=str, default='dump')
-    parser.add_argument('--ATLAS_SOURCE_TISSUE', type=str, default='[sourceTissue=Normal+LUAD+LUSC]')
-    parser.add_argument('--FEATURE_CODE', type=str, default='[SWAV]-[mpp=0.50]-[512-256]')
-    parser.add_argument('--WSI_FEATURE_CODE', type=str, default='dH-w')
-    parser.add_argument('--NUM_EPOCHS', type=int, default=10)
-    args = parser.parse_args()
+        """
+        selection_args, combination_args = options
 
-    num_worker = 0
+        combinator = Combinator()
+        selector = Selector()
 
-    # WORKSPACE_DIR = 'exp_output/storage/nima/'
-    WORKSPACE_DIR = 'exp_output/storage/a100/'
+        assert len(features.shape) == 2
+        num_instances, num_features = features.shape
 
-    WSI_FEATURE_CODE = args.WSI_FEATURE_CODE
+        type_combined_feats = []
+        for pattern_uid in range(self.num_patterns):
+            # select out patches assigned to pattern
+            sel = labels == pattern_uid
+            distance_p = distances[sel][..., pattern_uid]
+            features_p = distances[sel]
 
-    FEATURE_CODE = args.FEATURE_CODE
-    SUBSET_CODE = args.SUBSET_CODE
-    CLUSTER_CODE = args.CLUSTER_CODE
-    ATLAS_ROOT_DATA = args.ATLAS_ROOT_DATA
-    ATLAS_SOURCE_TISSUE = args.ATLAS_SOURCE_TISSUE
+            sel = selector.run(distance_p, selection_args)
 
-    THRESHOLD = 0.50
-    SELECTION_ROOT_DIR = (
-        f'{WORKSPACE_DIR}/features/mpp=0.25/'
-        f'/selections-{THRESHOLD:0.2f}/{SUBSET_CODE}/'
-    )
+            features_ = np.zeros([1, num_features])
+            distances_ = np.zeros([1])
+            if len(sel) > 0:
+                features_ = features_p[sel]
+                distances_ = distance_p[sel]
+            features_ = np.array(features_)
+            distances_ = np.array(distances_)
 
-    FEATURE_ROOT_DIR = (
-        f'{WORKSPACE_DIR}/features/{FEATURE_CODE}/{SUBSET_CODE}/'
-    )
+            features_ = combinator.run(features_, distances_, combination_args)
+            type_combined_feats.append(features_)
+        type_combined_feats = np.stack(type_combined_feats, axis=0)
+        return type_combined_feats
 
-    CLUSTER_ROOT_DIR = (
-        f'{WORKSPACE_DIR}/cluster_filtered-{THRESHOLD:0.2f}/'
-        # f'/ablation/[epochs={args.NUM_EPOCHS}]/'
-        f'{ATLAS_SOURCE_TISSUE}/{FEATURE_CODE}/{ATLAS_ROOT_DATA}/'
-        f'{CLUSTER_CODE}/'
-    )
-    cluster_model = joblib.load(f'{CLUSTER_ROOT_DIR}/model.dat')
-    NUM_TYPES = cluster_model.cluster_centers_.shape[0]
+    def _load_sample(self, sample_info):
+        ds_code, wsi_code = sample_info
+        features, positions = load_sample_with_info(
+            self.feature_dir, sample_info, load_positions=True
+        )
 
-    TRANSFORMED_DIR = (
-        f'{CLUSTER_ROOT_DIR}/transformed/{SUBSET_CODE}/'
-    )
-    OUT_DIR = (
-        f'{WORKSPACE_DIR}/downstream_filtered-{THRESHOLD:0.2f}//'
-        # f'/ablation/[epochs={args.NUM_EPOCHS}]/'
-        f'{ATLAS_SOURCE_TISSUE}/{FEATURE_CODE}/{ATLAS_ROOT_DATA}/'
-        f'{CLUSTER_CODE}/features/{WSI_FEATURE_CODE}/{SUBSET_CODE}/'
-        # f'{WORKSPACE_DIR}/dump/projection/{SUBSET_CODE}/'
-    )
-    rm_n_mkdir(OUT_DIR)
+        labels = np.load(f"{self.cluster_dir}/{ds_code}/{wsi_code}.label.npy")
+        distances = np.load(f"{self.cluster_dir}/{ds_code}/{wsi_code}.dist.npy")
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='|%(asctime)s.%(msecs)03d| [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d|%H:%M:%S',
-        handlers=[
-            logging.FileHandler("%s/debug.log" % (OUT_DIR)),
-            logging.StreamHandler()
-        ]
-    )
-    logging.info(args)
+        statistics = [positions, features, labels, distances]
+        if self.selection_dir:
+            selections = np.load(f"{self.cluster_dir}/{ds_code}/{wsi_code}.npy")
+            selections = selections > 0
+            statistics = [v[selections] for v in statistics]
 
-    scaler = None
-    # if 'normed' in CLUSTER_ROOT_DIR:
-    #     scaler = joblib.load(f'{CLUSTER_ROOT_DIR}/scaler.dat')
+        return statistics
 
-    label_paths = recur_find_ext(TRANSFORMED_DIR, ['.label.npy'])
-    wsi_codes = [pathlib.Path(v).name for v in label_paths]
-    wsi_codes = [v.replace('.label.npy', '') for v in wsi_codes]
+    def __call__(self, sample_info, projection_mode):
+        """
+        Args:
+            projection_mode (str): A string to denote which projection approach
+                to be used. The string is also coded as a way to provide
+                argument to the projection method.
 
-    out_paths = [f'{OUT_DIR}/{v}.npy' for v in wsi_codes]
-    input_info_list = list(
-        zip(wsi_codes, out_paths))
-    run_list = [
-        [process_one_subject,
-        *(list(info) + [WSI_FEATURE_CODE, NUM_TYPES, scaler])]
-        for idx, info in enumerate(input_info_list)]
-    multiproc_dispatcher(run_list, nr_worker=num_worker, crash_on_exception=True)
-    logging.info('Finish')
+                - `H`: Histogram of pattern assigned to patches
+
+                - `C`: Pairwise colocalization of pattern assigned to patches
+
+                - `dH-{SELECTION}-{COMBINATION}`: Combination of features of patches
+                    that are assigned to each pattern. `{SELECTION}` and `{COMBINATION}`
+                    are string of the form `{METHOD}{ARGUMENT}`.
+
+                    - For `{SELECTION}`, `{METHOD}` includes:
+                            - "n": No selection, return all.
+                            - "t": For each pattern, within their assigned patches, select
+                            patches that have their distances larger than a threshold.
+                            - "k": For each pattern, within their assigned patches, select
+                            patches that are the closest to it.
+                            - "fk": For each pattern, within their assigned patches, select
+                            patches that are the furthest away from it.
+
+                    - For `{COMBINATION}`, `{METHOD}` includes:
+                        of the selection method. It is in the form "{METHOD}{ARGUMENT}".
+                        Currently, `METHOD` includes:
+                            - "m": Averaging features of patches assigned to and selected for
+                            (by `{SELECTION}`) each pattern.
+                            - "w": Weighted sum features of patches assigned to and selected for
+                            (by `{SELECTION}`) each pattern. Weigths are the distances to the
+                            corresponding pattern.
+
+        """
+
+        bounds, features, labels, distances = self._load_sample(sample_info)
+        assert self.num_patterns > np.max(labels), np.unique(labels)
+
+        processing_codes = projection_mode.split("-")
+        feature_type = processing_codes[0]
+        options = processing_codes[1:]
+
+        if feature_type == "H":
+            xfeat = self.pattern_histogram(labels)
+        elif feature_type == "C":
+            xfeat = self.pattern_colocalization(labels, bounds)
+        elif feature_type == "dH":
+            xfeat = self.deep_feature_projection(labels, features, distances, options)
+        elif feature_type == "dC":
+            xfeat = self.montage_patterns(labels, bounds)
+        else:
+            assert False
+
+        xfeat = xfeat.astype(np.float32)
+        return xfeat
+
+
+def process_once(
+    sample_info,
+    feature_dir,
+    cluster_dir,
+    selection_dir,
+    save_dir,
+    projection_mode,
+    num_patterns,
+):
+    ds_code, wsi_code = sample_info
+    out_path = f"{save_dir}/{ds_code}/{wsi_code}.npy"
+    projector = WSIProjector(feature_dir, cluster_dir, selection_dir, num_patterns)
+    features = projector(sample_info, projection_mode)
+    # np.save(out_path, features)
+    print("here")
+
+
+def test():
+    sample_info = [".", "sample"]
+
+    num_patterns = 8
+    x_num_patches = 8
+    y_num_patches = 16
+    num_patches = x_num_patches * y_num_patches
+
+    np.random.seed(5)
+    features = np.random.rand(num_patches, 16)
+
+    positions = np.nonzero(np.ones([y_num_patches, x_num_patches]))
+    positions = np.transpose(np.array(positions), [1, 0])
+    positions = np.concatenate([positions, positions + 1], axis=-1) * 256
+
+    distances = np.random.rand(num_patches, num_patterns)
+    labes = np.random.randint(0, num_patterns, num_patches)
+
+    temp_dir = "/mnt/storage_0/workspace/h2t/h2t/experiments/debug/"
+    np.save(f"{temp_dir}/sample.features.npy", features)
+    np.save(f"{temp_dir}/sample.position.npy", positions)
+    np.save(f"{temp_dir}/sample.label.npy", labes)
+    np.save(f"{temp_dir}/sample.dist.npy", distances)
+
+    projection_modes = [
+        # "H",
+        # "C",
+        "dC",
+        # "dH-n-m",
+        # "dH-n-w",
+        # "dH-k8-m",
+        # "dH-fk8-m",
+        # "dH-t0.2-m",
+    ]
+
+    selection_dir = None
+    feature_dir = cluster_dir = save_dir = f"{temp_dir}/"
+
+    for projection_mode in projection_modes:
+        print(projection_mode)
+        process_once(
+            sample_info,
+            feature_dir,
+            cluster_dir,
+            selection_dir,
+            save_dir,
+            projection_mode,
+            num_patterns,
+        )
+    print("here")
+
+
+test()
+
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description="Process some integers.")
+#     parser.add_argument("--TARGET_DATASET", type=str)
+#     parser.add_argument("--FEATURE_ROOT_DIR", type=str)
+#     parser.add_argument("--CLUSTER_ROOT_DIR", type=str)
+#     parser.add_argument("--WSI_PROJECTION_CODE", type=str, default="dH-w")
+#     args = parser.parse_args()
+
+#     num_worker = 0
+
+#     PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+#     # TARGET_DATASET = args.TARGET_DATASET
+#     # FEATURE_ROOT_DIR = args.FEATURE_ROOT_PATH
+#     # CLUSTER_ROOT_DIR = args.CLUSTER_ROOT_PATH
+#     # WSI_PROJECTION_CODE = args.WSI_PROJECTION_CODE
+
+#     # * ---
+#     TARGET_DATASET = "tcga/lung/ffpe/lscc"
+#     FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
+#     CLUSTER_ROOT_DIR = (
+#         "/mnt/storage_0/workspace/h2t/h2t/experiments/"
+#         "debug/cluster/sample/tcga-lung-luad-lusc/[SWAV]-[mpp=0.50]-[512-256]/"
+#     )
+#     WSI_PROJECTION_CODE = "C"
+#     SELECTION_DIR = None
+
+#     # * ---
+#     from h2t.data.utils import retrieve_dataset_slide_info
+
+#     dataset_identifiers = [
+#         "tcga/lung/ffpe/lscc",
+#         "tcga/lung/frozen/lscc",
+#         "tcga/lung/ffpe/luad",
+#         "tcga/lung/frozen/luad",
+#         # "cptac/lung/luad",
+#         # "cptac/lung/lscc",
+#         # "tcga/breast/ffpe",
+#         # "tcga/breast/frozen",
+#         # "tcga/kidney/ffpe",
+#         # "tcga/kidney/frozen",
+#     ]
+#     CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
+#     dataset_sample_info = retrieve_dataset_slide_info(
+#         CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
+#     )
+#     sample_info_list = dataset_sample_info[TARGET_DATASET]
+#     sample_info_list = [v[0] for v in sample_info_list]
+
+#     # * ---
+
+#     cluster_config = load_yaml(f"{CLUSTER_ROOT_DIR}/config.yaml")
+#     num_patterns = cluster_config["num_patterns"]
+
+#     run_list = [
+#         # [process_once, sample_info, FEATURE_ROOT_DIR, CLUSTER_ROOT_DIR, SELECTION_DIR, WSI_PROJECTION_CODE, num_patterns]
+#         process_once(
+#             sample_info,
+#             FEATURE_ROOT_DIR,
+#             f"{CLUSTER_ROOT_DIR}/transformed/",
+#             SELECTION_DIR,
+#             WSI_PROJECTION_CODE,
+#             num_patterns,
+#         )
+#         for sample_info in sample_info_list[:1]
+#     ]

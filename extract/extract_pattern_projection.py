@@ -1,18 +1,12 @@
 import argparse
-import json
-import logging
 import os
-import pathlib
-import pickle
-import shutil
-from io import BytesIO
 
 import joblib
 import numpy as np
-import torch
+
 from scipy.spatial import distance
 
-from h2t.misc.utils import dispatch_processing, rm_n_mkdir, load_yaml
+from h2t.misc.utils import dispatch_processing, mkdir, rm_n_mkdir, load_yaml
 from h2t.data.utils import retrieve_dataset_slide_info, retrieve_subset
 from h2t.extract.utils import load_sample_with_info
 
@@ -75,7 +69,7 @@ if __name__ == "__main__":
         f"{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
     )
     # * ---
-    SAVE_DIR = f"{CLUSTER_DIR}/transformed/{TARGET_DATASET}/"
+    SAVE_DIR = f"{CLUSTER_DIR}/transformed/"
     rm_n_mkdir(SAVE_DIR)
 
     # * ---
@@ -98,6 +92,12 @@ if __name__ == "__main__":
     )
     sample_info_list = dataset_sample_info[TARGET_DATASET]
     sample_info_list = [v[0] for v in sample_info_list]
+
+    # premade all directories to prevent possible collisions
+    ds_codes, _ = list(zip(*sample_info_list))
+    ds_codes = np.unique(ds_codes)
+    for ds_code in ds_codes:
+        mkdir(f"{SAVE_DIR}/{ds_code}")
 
     # * ---
 

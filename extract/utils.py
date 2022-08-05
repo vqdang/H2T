@@ -52,3 +52,34 @@ def load_sample_with_info(
     if load_positions:
         return patch_features, patch_positions
     return patch_features
+
+
+def normalize_positions(positions, step_shape=None, dtype=np.int32):
+    """Quantize/Normalize the positions with respect to the step size.
+
+    Args:
+        positions (np.ndarray): Array of shape `(num_patches, bounds)`
+            where bounds contains `(top_left_x, top_left_y, bot_right_x, bot_right_y)`
+
+    Example: Consider a list of positions `[[256, 256], [512, 512], [1024, 1024]]`
+        in `(x, y)` coordinates, in term of step of shape `(H, W) = (256, 256)`,
+        the above list is first converted to `[[1, 1], [2, 2], [4, 4]]`. Afterward,
+        they are shifted to the top-left normalized corner and become
+        `[[0, 0], [1, 1], [3, 3]]`.
+
+    """
+    assert len(positions.shape) == 2
+    assert positions.shape[1] == 4
+
+    top_left = np.min(positions[:, :2], axis=0, keepdims=True)
+    positions_ = positions.copy()
+    positions_[:, :2] = (positions_[:, :2] - top_left[None])
+    positions_[:, 2:] = (positions_[:, 2:] - top_left[None])
+    if step_shape is None:
+        patch_sizes = positions_[:, 2:] - positions_[:, :2]
+        patch_sizes = np.unique(patch_sizes, axis=0)
+        assert len(patch_sizes) == 1
+        assert patch_sizes[0][0] == patch_sizes[0][1]
+        step_shape = patch_sizes[0][0]
+    positions_ = (positions_ / step_shape).astype(dtype)
+    return positions_
