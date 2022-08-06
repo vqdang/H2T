@@ -1,8 +1,5 @@
 import argparse
 import itertools
-import re
-
-import joblib
 import numpy as np
 from sklearn.neighbors import KDTree
 
@@ -17,6 +14,7 @@ from h2t.misc.utils import (
     rmdir,
 )
 from h2t.extract.utils import load_sample_with_info, normalize_positions
+from h2t.data.utils import retrieve_dataset_slide_info
 
 
 class Selector:
@@ -172,7 +170,7 @@ class WSIProjector(object):
 
         positions = normalize_positions(bounds)[:, :2]
         w, h = np.max(positions, axis=0)
-        canvas = np.full((h+1, w+1), -1, dtype=np.int32)
+        canvas = np.full((h + 1, w + 1), -1, dtype=np.int32)
         # -1 to denote background and to prevent overwriting exisitng
         # location with label 0 in `labels`
         canvas[positions[:, 1], positions[:, 0]] = labels
@@ -307,11 +305,11 @@ def process_once(
     out_path = f"{save_dir}/{ds_code}/{wsi_code}.npy"
     projector = WSIProjector(feature_dir, cluster_dir, selection_dir, num_patterns)
     features = projector(sample_info, projection_mode)
-    # np.save(out_path, features)
-    print("here")
+    np.save(out_path, features)
 
 
-def test():
+def functional_test():
+    temp_dir = "/mnt/storage_0/workspace/h2t/h2t/experiments/debug/"
     sample_info = [".", "sample"]
 
     num_patterns = 8
@@ -329,21 +327,20 @@ def test():
     distances = np.random.rand(num_patches, num_patterns)
     labes = np.random.randint(0, num_patterns, num_patches)
 
-    temp_dir = "/mnt/storage_0/workspace/h2t/h2t/experiments/debug/"
     np.save(f"{temp_dir}/sample.features.npy", features)
     np.save(f"{temp_dir}/sample.position.npy", positions)
     np.save(f"{temp_dir}/sample.label.npy", labes)
     np.save(f"{temp_dir}/sample.dist.npy", distances)
 
     projection_modes = [
-        # "H",
-        # "C",
+        "H",
+        "C",
         "dC",
-        # "dH-n-m",
-        # "dH-n-w",
-        # "dH-k8-m",
-        # "dH-fk8-m",
-        # "dH-t0.2-m",
+        "dH-n-m",
+        "dH-n-w",
+        "dH-k8-m",
+        "dH-fk8-m",
+        "dH-t0.2-m",
     ]
 
     selection_dir = None
@@ -360,73 +357,90 @@ def test():
             projection_mode,
             num_patterns,
         )
-    print("here")
 
 
-test()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument("--FEATURE_CODE", type=str)
+    parser.add_argument("--METHOD_CODE", type=str)
+    parser.add_argument("--SOURCE_DATASET", type=str)
+    parser.add_argument("--TARGET_DATASET", type=str)
+    parser.add_argument("--WSI_PROJECTION_CODE", type=str, default="dH-n-w")
+    args = parser.parse_args()
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description="Process some integers.")
-#     parser.add_argument("--TARGET_DATASET", type=str)
-#     parser.add_argument("--FEATURE_ROOT_DIR", type=str)
-#     parser.add_argument("--CLUSTER_ROOT_DIR", type=str)
-#     parser.add_argument("--WSI_PROJECTION_CODE", type=str, default="dH-w")
-#     args = parser.parse_args()
 
-#     num_worker = 0
+    NUM_WORKERS = 64
+    SOURCE_DATASET = args.SOURCE_DATASET
+    TARGET_DATASET = args.TARGET_DATASET
+    FEATURE_CODE = args.FEATURE_CODE
+    METHOD_CODE = args.METHOD_CODE
+    WSI_PROJECTION_CODE = args.WSI_PROJECTION_CODE
 
-#     PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-#     # TARGET_DATASET = args.TARGET_DATASET
-#     # FEATURE_ROOT_DIR = args.FEATURE_ROOT_PATH
-#     # CLUSTER_ROOT_DIR = args.CLUSTER_ROOT_PATH
-#     # WSI_PROJECTION_CODE = args.WSI_PROJECTION_CODE
+    # * ---
+    # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+    # TARGET_DATASET = "tcga/lung/ffpe/lscc"
+    # FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
+    # CLUSTER_ROOT_DIR = (
+    #     "/mnt/storage_0/workspace/h2t/h2t/experiments/"
+    #     "debug/cluster/sample/tcga-lung-luad-lusc/[SWAV]-[mpp=0.50]-[512-256]/"
+    # )
+    # WSI_PROJECTION_CODE = "C"
+    # SELECTION_DIR = None
 
-#     # * ---
-#     TARGET_DATASET = "tcga/lung/ffpe/lscc"
-#     FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/[SWAV]-[mpp=0.50]-[512-256]/"
-#     CLUSTER_ROOT_DIR = (
-#         "/mnt/storage_0/workspace/h2t/h2t/experiments/"
-#         "debug/cluster/sample/tcga-lung-luad-lusc/[SWAV]-[mpp=0.50]-[512-256]/"
-#     )
-#     WSI_PROJECTION_CODE = "C"
-#     SELECTION_DIR = None
+    # * ---
 
-#     # * ---
-#     from h2t.data.utils import retrieve_dataset_slide_info
+    SELECTION_DIR = None
+    PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
+    FEATURE_ROOT_DIR = f"/root/dgx_workspace/h2t/features/{FEATURE_CODE}/"
+    CLUSTER_ROOT_DIR = (
+        # f"{PWD}/experiments/debug/cluster/"
+        f"/root/lsf_workspace/projects/atlas/media-v1/clustering/"
+        f"{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    )
+    SAVE_DIR = f"{CLUSTER_ROOT_DIR}/features/{WSI_PROJECTION_CODE}/"
 
-#     dataset_identifiers = [
-#         "tcga/lung/ffpe/lscc",
-#         "tcga/lung/frozen/lscc",
-#         "tcga/lung/ffpe/luad",
-#         "tcga/lung/frozen/luad",
-#         # "cptac/lung/luad",
-#         # "cptac/lung/lscc",
-#         # "tcga/breast/ffpe",
-#         # "tcga/breast/frozen",
-#         # "tcga/kidney/ffpe",
-#         # "tcga/kidney/frozen",
-#     ]
-#     CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
-#     dataset_sample_info = retrieve_dataset_slide_info(
-#         CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
-#     )
-#     sample_info_list = dataset_sample_info[TARGET_DATASET]
-#     sample_info_list = [v[0] for v in sample_info_list]
+    # * ---
+    dataset_identifiers = [
+        # "tcga/lung/ffpe/lscc",
+        # "tcga/lung/frozen/lscc",
+        # "tcga/lung/ffpe/luad",
+        # "tcga/lung/frozen/luad",
+        # "cptac/lung/luad",
+        # "cptac/lung/lscc",
+        "tcga/breast/ffpe",
+        "tcga/breast/frozen",
+        "tcga/kidney/ffpe",
+        "tcga/kidney/frozen",
+    ]
+    CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
+    dataset_sample_info = retrieve_dataset_slide_info(
+        CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
+    )
+    sample_info_list = dataset_sample_info[TARGET_DATASET]
+    sample_info_list = [v[0] for v in sample_info_list]
 
-#     # * ---
+    # premade all directories to prevent possible collisions
+    ds_codes, _ = list(zip(*sample_info_list))
+    ds_codes = np.unique(ds_codes)
+    for ds_code in ds_codes:
+        mkdir(f"{SAVE_DIR}/{ds_code}")
 
-#     cluster_config = load_yaml(f"{CLUSTER_ROOT_DIR}/config.yaml")
-#     num_patterns = cluster_config["num_patterns"]
+    # * ---
 
-#     run_list = [
-#         # [process_once, sample_info, FEATURE_ROOT_DIR, CLUSTER_ROOT_DIR, SELECTION_DIR, WSI_PROJECTION_CODE, num_patterns]
-#         process_once(
-#             sample_info,
-#             FEATURE_ROOT_DIR,
-#             f"{CLUSTER_ROOT_DIR}/transformed/",
-#             SELECTION_DIR,
-#             WSI_PROJECTION_CODE,
-#             num_patterns,
-#         )
-#         for sample_info in sample_info_list[:1]
-#     ]
+    cluster_config = load_yaml(f"{CLUSTER_ROOT_DIR}/config.yaml")
+    num_patterns = cluster_config["num_patterns"]
+
+    run_list = [
+        [
+            process_once,
+            sample_info,
+            FEATURE_ROOT_DIR,
+            f"{CLUSTER_ROOT_DIR}/transformed/",
+            SELECTION_DIR,
+            SAVE_DIR,
+            WSI_PROJECTION_CODE,
+            num_patterns,
+        ]
+        for sample_info in sample_info_list
+    ]
+    dispatch_processing(run_list, num_workers=NUM_WORKERS, crash_on_exception=True)
