@@ -37,54 +37,62 @@ def transform_once(root_dir, save_dir, sample_info, patterns, scaler=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("--CLUSTER_CODE", type=str)
+    parser.add_argument("--METHOD_CODE", type=str)
     parser.add_argument("--SOURCE_DATASET", type=str)
     parser.add_argument("--TARGET_DATASET", type=str)
-    parser.add_argument(
-        "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
-    )
+    parser.add_argument("--FEATURE_CODE", type=str)
     args = parser.parse_args()
     print(args)
 
-    WORKSPACE_DIR = "exp_output/storage/a100/"
-
-    CLUSTER_CODE = args.CLUSTER_CODE
+    NUM_WORKERS = 64
+    METHOD_CODE = args.METHOD_CODE
     FEATURE_CODE = args.FEATURE_CODE
     TARGET_DATASET = args.TARGET_DATASET
     SOURCE_DATASET = args.SOURCE_DATASET
 
     # * debug
-    CLUSTER_CODE = "sample"
-    FEATURE_CODE = args.FEATURE_CODE
-    TARGET_DATASET = "tcga/lung/ffpe/lscc"
-    SOURCE_DATASET = "tcga-lung-luad-lusc"
+    # CLUSTER_CODE = "sample"
+    # FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
+    # TARGET_DATASET = "tcga/lung/ffpe/lscc"
+    # SOURCE_DATASET = "tcga-lung-luad-lusc"
     # *
 
     # * ---
-    PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
+    # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+    # FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
+    # CLUSTER_DIR = (
+    #     # f"{PWD}/experiments/local/"
+    #     f"{PWD}/experiments/debug/cluster/"
+    #     f"{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    # )
+    # * ---
+
+    # * ---
+    PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
+    FEATURE_ROOT_DIR = f"/root/dgx_workspace/h2t/features/{FEATURE_CODE}/"
     CLUSTER_DIR = (
-        # f"{PWD}/experiments/local/"
-        f"{PWD}/experiments/debug/cluster/"
-        f"{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+        # f"{PWD}/experiments/debug/cluster/"
+        f"/root/lsf_workspace/projects/atlas/media-v1/clustering/"
+        f"{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
     )
     # * ---
+
     SAVE_DIR = f"{CLUSTER_DIR}/transformed/"
     rm_n_mkdir(SAVE_DIR)
 
     # * ---
 
     dataset_identifiers = [
-        "tcga/lung/ffpe/lscc",
-        "tcga/lung/frozen/lscc",
-        "tcga/lung/ffpe/luad",
-        "tcga/lung/frozen/luad",
+        # "tcga/lung/ffpe/lscc",
+        # "tcga/lung/frozen/lscc",
+        # "tcga/lung/ffpe/luad",
+        # "tcga/lung/frozen/luad",
         # "cptac/lung/luad",
         # "cptac/lung/lscc",
-        # "tcga/breast/ffpe",
-        # "tcga/breast/frozen",
-        # "tcga/kidney/ffpe",
-        # "tcga/kidney/frozen",
+        "tcga/breast/ffpe",
+        "tcga/breast/frozen",
+        "tcga/kidney/ffpe",
+        "tcga/kidney/frozen",
     ]
     CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
     dataset_sample_info = retrieve_dataset_slide_info(
@@ -108,10 +116,9 @@ if __name__ == "__main__":
     scaler = None
     if os.path.exists(f"{CLUSTER_DIR}/scaler.dat"):
         scaler = joblib.load(f"{CLUSTER_DIR}/scaler.dat")
-    assert scaler is None
 
     run_list = [
         [transform_once, FEATURE_ROOT_DIR, SAVE_DIR, sample_info, patterns, scaler]
         for sample_info in sample_info_list
     ]
-    dispatch_processing(run_list, 0, crash_on_exception=True)
+    dispatch_processing(run_list, num_workers=NUM_WORKERS, crash_on_exception=True)
