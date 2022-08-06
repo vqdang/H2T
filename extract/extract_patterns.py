@@ -135,14 +135,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("--METHOD_CODE", type=str, default="sample")
-    parser.add_argument("--SOURCE_DATASET", type=str, default="tcga-lung-luad-lusc")
-    parser.add_argument(
-        "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
-    )
-    parser.add_argument("--NUM_EPOCHS", type=int, default=25)
+    parser.add_argument("--METHOD_CODE", type=str)
+    parser.add_argument("--SOURCE_DATASET", type=str)
+    parser.add_argument("--FEATURE_CODE", type=str)
+    parser.add_argument("--NUM_EPOCHS", type=int, default=50)
     parser.add_argument("--SCALER", type=bool, default=False)
-    parser.add_argument("--NUM_CLUSTERS", type=int, default=8)
+    parser.add_argument("--NUM_CLUSTERS", type=int, default=16)
 
     args = parser.parse_args()
     print(args)
@@ -151,43 +149,55 @@ if __name__ == "__main__":
 
     # *
     METHOD_CODE = args.METHOD_CODE
+    SOURCE_DATASET = args.SOURCE_DATASET
     FEATURE_CODE = args.FEATURE_CODE
 
     # * ----
 
-    # PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
-    # FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/[SWAV]-[mpp=0.50]-[512-256]/"
+    # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+    # os.environ["JOBLIB_TEMP_FOLDER"] = f"{PWD}/experiments/debug/cache/"
 
-    PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-    os.environ["JOBLIB_TEMP_FOLDER"] = f"{PWD}/experiments/debug/cache/"
+    # SOURCE_DATASET = args.SOURCE_DATASET
+    # SELECTION_DIR = None
+    # FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
+    # CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
+    # RECIPE_PATH = f"{PWD}/extract/params/spherical_kmean.yaml"
 
-    SOURCE_DATASET = args.SOURCE_DATASET
+    # # SAVE_DIR = (
+    # #     f"{PWD}/experiments/remote/clustering/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    # # )
+
+    # SAVE_DIR = f"{PWD}/experiments/debug/cluster/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    # ----
+
+    os.environ["JOBLIB_TEMP_FOLDER"] = f"/root/cache/"
+    PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
+
     SELECTION_DIR = None
-    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
+    FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/[SWAV]-[mpp=0.50]-[512-256]/"
     CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
     RECIPE_PATH = f"{PWD}/extract/params/spherical_kmean.yaml"
 
-    # SAVE_DIR = (
-    #     f"{PWD}/experiments/remote/clustering/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
-    # )
-
-    SAVE_DIR = f"{PWD}/experiments/debug/cluster/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    SAVE_DIR = (
+        f"/root/lsf_workspace/projects/atlas/media-v1/clustering/"
+        f"{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    )
 
     mkdir(SAVE_DIR)
     setup_logger(f"{SAVE_DIR}/debug.log")
     # * ---
 
     dataset_identifiers = [
-        "tcga/lung/ffpe/lscc",
-        "tcga/lung/frozen/lscc",
-        "tcga/lung/ffpe/luad",
-        "tcga/lung/frozen/luad",
+        # "tcga/lung/ffpe/lscc",
+        # "tcga/lung/frozen/lscc",
+        # "tcga/lung/ffpe/luad",
+        # "tcga/lung/frozen/luad",
         # "cptac/lung/luad",
         # "cptac/lung/lscc",
-        # "tcga/breast/ffpe",
-        # "tcga/breast/frozen",
-        # "tcga/kidney/ffpe",
-        # "tcga/kidney/frozen",
+        "tcga/breast/ffpe",
+        "tcga/breast/frozen",
+        "tcga/kidney/ffpe",
+        "tcga/kidney/frozen",
     ]
 
     DATASET_CONFIG = load_yaml(f"{PWD}/extract/config.yaml")
@@ -209,6 +219,9 @@ if __name__ == "__main__":
     )
     recipe["num_patterns"] = (
         args.NUM_CLUSTERS if recipe["num_patterns"] is None else recipe["num_patterns"]
+    )
+    recipe["num_epochs"] = (
+        args.NUM_EPOCHS if recipe["num_epochs"] is None else recipe["num_epochs"]
     )
     save_yaml(f"{SAVE_DIR}/config.yaml", recipe)
 
