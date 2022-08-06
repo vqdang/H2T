@@ -78,7 +78,6 @@ if __name__ == "__main__":
     # * ---
 
     SAVE_DIR = f"{CLUSTER_DIR}/transformed/"
-    rm_n_mkdir(SAVE_DIR)
 
     # * ---
 
