@@ -89,3 +89,55 @@ tcga-lung-luad-lusc:
     "Squamous cell carcinoma, keratinizing, NOS": 2
     "Squamous cell carcinoma, large cell, nonkeratinizing, NOS": 2
     "Squamous cell carcinoma, small cell, nonkeratinizing": 2
+
+
+# * Available pathologic labels in TCGA Breast
+# - Adenoid cystic carcinoma
+# - Apocrine adenocarcinoma
+# - Basal cell carcinoma, NOS
+# - Carcinoma, NOS
+# - Cribriform carcinoma, NOS
+# - Infiltrating duct and lobular carcinoma
+# - Infiltrating duct carcinoma, NOS
+# - Infiltrating duct mixed with other types of carcinoma
+# - Infiltrating lobular mixed with other types of carcinoma
+# - Intraductal micropapillary carcinoma
+# - Intraductal papillary adenocarcinoma with invasion
+# - Large cell neuroendocrine carcinoma
+# - Lobular carcinoma, NOS
+# - Malignant lymphoma, large B-cell, diffuse, NOS
+# - Medullary carcinoma, NOS
+# - Metaplastic carcinoma, NOS
+# - Mucinous adenocarcinoma
+# - Paget disease and infiltrating duct carcinoma of breast
+# - Papillary carcinoma, NOS
+# - Phyllodes tumor, malignant
+# - Pleomorphic carcinoma
+# - Secretory carcinoma of breast
+# - Tubular adenocarcinoma
+
+tcga-breast-idc-lob:
+  identifiers: ["tcga/breast/ffpe", "tcga/breast/frozen"]
+  labels:
+    "Infiltrating duct carcinoma, NOS": 0
+    "Lobular carcinoma, NOS": 1
+
+# * Available pathologic labels in TCGA Kidney
+# - Clear cell adenocarcinoma, NOS
+# - Giant cell sarcoma
+# - Papillary adenocarcinoma, NOS
+# - Renal cell carcinoma, NOS
+# - Renal cell carcinoma, chromophobe type
+# - Synovial sarcoma, spindle cell
+
+# CCRCC vs. PRCC vs. CHRCC
+# Clear Cell, Papillary, and Chromophobe Renal Cell Carcinoma
+# Kidney Chromophobe Renal Cell Carcinoma (TCGA-KICH)
+# Kidney Renal Papillary Cell Carcinoma (TCGA-KIRP)
+# Kidney Renal Clear Cell Carcinoma (TCGA-KIRC)
+tcga-kidney-ccrcc-prcc-chrcc:
+  identifiers: ["tcga/kidney/ffpe", "tcga/kidney/frozen"]
+  labels:
+    "Clear cell adenocarcinoma, NOS": 0
+    "Papillary adenocarcinoma, NOS": 1
+    "Renal cell carcinoma, chromophobe type": 2
