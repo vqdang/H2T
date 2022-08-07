@@ -36,6 +36,7 @@ def retrieve_dataset_slide_info(
         slide_names = [pathlib.Path(v).stem for v in slide_names]
         slide_names = [str(v).replace(".features", "") for v in slide_names]
         assert len(slide_names) > 0, f"{feature_root_dir}/{identifier}/"
+        print(f"#Feature Files in {identifier}: {len(slide_names)}")
 
         if "tcga" in identifier:
             organ_identifier = identifier.split("/")[1]
