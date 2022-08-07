@@ -101,6 +101,7 @@ class H2TArgumentParser(CMDArgumentParser):
         self.DATASET_MODE = "single"
         self.CLUSTER_DIR = (
             f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
+            # "/root/lsf_workspace/projects/atlas/media-v1/clustering/"
             f"{self.CLUSTER_CODE}/{self.SOURCE_DATASET}/{self.FEATURE_CODE}/"
         )
 
@@ -108,6 +109,7 @@ class H2TArgumentParser(CMDArgumentParser):
         subset_code, wsi_code = sample_info
         path = (
             f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
+            # "/root/lsf_workspace/projects/atlas/media-v1/clustering/"
             f"{self.CLUSTER_CODE}/{self.SOURCE_DATASET}/{self.FEATURE_CODE}/features/"
             f"{projection_code}/{subset_code}/{wsi_code}"
         )
@@ -124,16 +126,20 @@ class H2TArgumentParser(CMDArgumentParser):
         model_kwargs = paramset["model_kwargs"]
         model_kwargs["num_input_channels"] = metadata["num_features"] * num_patterns
 
-        colocal_kwargs = {
-            "encode": None,
-            "encode_kwargs": {"max_value": num_patterns + 1},
-        }
         if any("dC-raw" in v for v in wsi_projection_codes):
+            colocal_kwargs = {
+                "encode": None,
+                "encode_kwargs": {"max_value": num_patterns + 1},
+            }
             metadata["architecture_name"] = "cnn-probe"
         elif any("dC" in v for v in wsi_projection_codes):
-            colocal_kwargs["encode"] = "onehot"
+            colocal_kwargs = {
+                "encode": "onehot",
+                "encode_kwargs": {"max_value": num_patterns + 1},
+            }
             metadata["architecture_name"] = "cnn-probe"
         else:
+            colocal_kwargs = None
             metadata["architecture_name"] = "linear-probe"
 
         model_kwargs["colocal"] = colocal_kwargs
@@ -145,7 +151,9 @@ class H2TArgumentParser(CMDArgumentParser):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("--gpu", type=str, default="0")
-    parser.add_argument("--SPLIT_IDX", type=int, default=0)
+    parser.add_argument("--DATA_SPLIT_CODE", type=str)
+    parser.add_argument("--TRAINING_CONFIG_CODE", type=str)
+    parser.add_argument("--SPLIT_IDX", type=int, default=None)
     parser.add_argument("--ARCH_CODE", type=str, default=None)
     parser.add_argument("--FEATURE_CODE", type=str)
     parser.add_argument("--CLUSTER_CODE", type=str, default="")
@@ -168,6 +176,9 @@ if __name__ == "__main__":
     SOURCE_DATASET = args.SOURCE_DATASET
     WSI_FEATURE_CODE = args.WSI_FEATURE_CODE
 
+    DATA_SPLIT_CODE = args.DATA_SPLIT_CODE
+    TRAINING_CONFIG_CODE = args.TRAINING_CONFIG_CODE
+
     # * debug MIL
     # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
     # SAVE_PATH = f"{PWD}/experiments/debug/downstream/"
@@ -179,18 +190,21 @@ if __name__ == "__main__":
     # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
     # SAVE_PATH = f"{PWD}/experiments/debug/downstream/"
     # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/probe-template.yml"
-    # SPLIT_INFO_PATH = f"{PWD}/data/splits/{SPLIT_CODE}.dat"
-    # SPLIT_CODE = "[idc-lob]_train=tcga"
+    # DATA_SPLIT_CODE = "[idc-lob]_train=tcga"
     # CLUSTER_CODE = "spherical-kmean-16"
     # SOURCE_DATASET = f"tcga-breast-idc-lob"
     # WSI_FEATURE_CODE = "dH-n-w#dC-onehot"
     # FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
+    # SPLIT_INFO_PATH = f"{PWD}/data/splits/{DATA_SPLIT_CODE}.dat"
 
     # * LSF
+    PWD = os.environ["PROJECT_WORKSPACE"]
+    TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/{TRAINING_CONFIG_CODE}.yml"
+    SPLIT_INFO_PATH = f"{PWD}/data/splits/{DATA_SPLIT_CODE}.dat"
     SAVE_PATH = (
         # f"{PWD}/experiments/downstream/"
         "/root/lsf_workspace/projects/atlas/media-v1/downstream-x/"
-        f"{SPLIT_CODE}/{FEATURE_CODE}/"
+        f"{DATA_SPLIT_CODE}/{FEATURE_CODE}/"
         f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/"
     )
 
