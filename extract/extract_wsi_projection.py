@@ -61,6 +61,21 @@ class Selector:
                 patterns.
 
         Return:
+            np.ndarray: An array of selected indices outside `distances`
+
+        """
+        sel = distances > threshold
+        return np.nonzero(sel)[0]
+
+    def within_distance_to_pattern(self, distances, threshold: float):
+        """Return indices of items having distance smaller than threshold.
+
+        Args:
+            distances: An array of shape `(N, P)` where `N` is the
+                the number of sample and `P` is the number of the
+                patterns.
+
+        Return:
             np.ndarray: An array of selected indices within `distances`
 
         """
@@ -74,8 +89,11 @@ class Selector:
         elif "k" in mode:
             opt = int(mode.replace("k", ""))
             return self.closest_to_patterns(distances, opt)
-        elif "t" in mode:
-            opt = float(mode.replace("t", ""))
+        elif "it" in mode:
+            opt = float(mode.replace("it", ""))
+            return self.within_distance_to_pattern(distances, opt)
+        elif "ot" in mode:
+            opt = float(mode.replace("ot", ""))
             return self.outside_distance_to_pattern(distances, opt)
         elif "n" == mode:
             return np.arange(distances.shape[0])
@@ -201,7 +219,7 @@ class WSIProjector(object):
             # select out patches assigned to pattern
             sel = labels == pattern_uid
             distance_p = distances[sel][..., pattern_uid]
-            features_p = distances[sel]
+            features_p = features[sel]
 
             sel = selector.run(distance_p, selection_args)
 
@@ -368,8 +386,7 @@ if __name__ == "__main__":
     parser.add_argument("--WSI_PROJECTION_CODE", type=str, default="dH-n-w")
     args = parser.parse_args()
 
-
-    NUM_WORKERS = 64
+    NUM_WORKERS = 0
     SOURCE_DATASET = args.SOURCE_DATASET
     TARGET_DATASET = args.TARGET_DATASET
     FEATURE_CODE = args.FEATURE_CODE
@@ -386,6 +403,27 @@ if __name__ == "__main__":
     # )
     # WSI_PROJECTION_CODE = "C"
     # SELECTION_DIR = None
+
+    # # * ---
+
+    # SELECTION_DIR = None
+    # PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
+    # FEATURE_ROOT_DIR = f"/root/dgx_workspace/h2t/features/{FEATURE_CODE}/"
+    # CLUSTER_ROOT_DIR = (
+    #     # f"{PWD}/experiments/debug/cluster/"
+    #     f"/root/lsf_workspace/projects/atlas/media-v1/clustering/"
+    #     f"{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    # )
+    # SAVE_DIR = f"{CLUSTER_ROOT_DIR}/features/{WSI_PROJECTION_CODE}/"
+
+    # * --- DEBUG LSF
+
+    FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
+    METHOD_CODE = "spherical-kmean-32"
+    SOURCE_DATASET = "tcga-kidney-ccrcc-prcc-chrcc"
+    TARGET_DATASET = "tcga/kidney/ffpe"
+    # WSI_PROJECTION_CODE = "dH-it0.2-w"
+    WSI_PROJECTION_CODE = "dH-n-w"
 
     # * ---
 
@@ -422,8 +460,9 @@ if __name__ == "__main__":
     # premade all directories to prevent possible collisions
     ds_codes, _ = list(zip(*sample_info_list))
     ds_codes = np.unique(ds_codes)
+
     for ds_code in ds_codes:
-        mkdir(f"{SAVE_DIR}/{ds_code}")
+        rm_n_mkdir(f"{SAVE_DIR}/{ds_code}/")
 
     # * ---
 
