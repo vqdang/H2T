@@ -104,12 +104,12 @@ if __name__ == "__main__":
     ds_codes, _ = list(zip(*sample_info_list))
     ds_codes = np.unique(ds_codes)
     for ds_code in ds_codes:
-        mkdir(f"{SAVE_DIR}/{ds_code}")
+        mkdir(f"{SAVE_DIR}/{ds_code}/")
 
     # * ---
 
     model_config = load_yaml(f"{CLUSTER_DIR}/config.yaml")
-    model = joblib.load(f"{CLUSTER_DIR}/model.dat")
+    model = joblib.load(f"{CLUSTER_DIR}/models/model-049.dat")
     patterns = model.prototypical_patterns()
 
     scaler = None

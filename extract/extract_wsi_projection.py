@@ -234,6 +234,7 @@ class WSIProjector(object):
             features_ = combinator.run(features_, distances_, combination_args)
             type_combined_feats.append(features_)
         type_combined_feats = np.stack(type_combined_feats, axis=0)
+        assert type_combined_feats.shape[1] == 2048
         return type_combined_feats
 
     def _load_sample(self, sample_info):
@@ -336,7 +337,7 @@ def functional_test():
     num_patches = x_num_patches * y_num_patches
 
     np.random.seed(5)
-    features = np.random.rand(num_patches, 16)
+    features = np.random.rand(num_patches, 2048)
 
     positions = np.nonzero(np.ones([y_num_patches, x_num_patches]))
     positions = np.transpose(np.array(positions), [1, 0])
@@ -418,12 +419,12 @@ if __name__ == "__main__":
 
     # * --- DEBUG LSF
 
-    FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
-    METHOD_CODE = "spherical-kmean-32"
-    SOURCE_DATASET = "tcga-kidney-ccrcc-prcc-chrcc"
-    TARGET_DATASET = "tcga/kidney/ffpe"
-    # WSI_PROJECTION_CODE = "dH-it0.2-w"
-    WSI_PROJECTION_CODE = "dH-n-w"
+    # FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
+    # METHOD_CODE = "spherical-kmean-32"
+    # SOURCE_DATASET = "tcga-kidney-ccrcc-prcc-chrcc"
+    # TARGET_DATASET = "tcga/kidney/ffpe"
+    # # WSI_PROJECTION_CODE = "dH-it0.2-w"
+    # WSI_PROJECTION_CODE = "dH-n-w"
 
     # * ---
 
