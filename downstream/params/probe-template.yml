@@ -10,8 +10,8 @@ optimizer_kwargs:
 loader_kwargs:
   # train: { 'batch_size' : 32, 'nr_procs' : 16}
   # infer: { 'batch_size' : 32, 'nr_procs' : 16}
-  train: { 'batch_size' : 32, 'nr_procs' : 2}
-  infer: { 'batch_size' : 32, 'nr_procs' : 2}
+  train: { 'batch_size' : 32, 'nr_procs' : 16}
+  infer: { 'batch_size' : 32, 'nr_procs' : 16}
 
 model_kwargs:
   num_types: 2  # benign vs cancer, placeholder

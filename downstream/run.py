@@ -124,15 +124,23 @@ class H2TArgumentParser(CMDArgumentParser):
         num_patterns = cluster_config["num_patterns"]
 
         model_kwargs = paramset["model_kwargs"]
-        model_kwargs["num_input_channels"] = metadata["num_features"] * num_patterns
 
-        if any("dC-raw" in v for v in wsi_projection_codes):
+        if any("H" == v for v in wsi_projection_codes):
+            model_kwargs["num_input_channels"] = num_patterns
+        elif any("dH" in v for v in wsi_projection_codes):
+            model_kwargs["num_input_channels"] = metadata["num_features"] * num_patterns
+        else:
+            model_kwargs["num_input_channels"] = 0
+
+        if any("C" == v for v in wsi_projection_codes):
+            model_kwargs["num_input_channels"] += (num_patterns * num_patterns)
+        if any("dC-raw" == v for v in wsi_projection_codes):
             colocal_kwargs = {
                 "encode": None,
                 "encode_kwargs": {"max_value": num_patterns + 1},
             }
             metadata["architecture_name"] = "cnn-probe"
-        elif any("dC" in v for v in wsi_projection_codes):
+        elif any("dC-onehot" == v for v in wsi_projection_codes):
             colocal_kwargs = {
                 "encode": "onehot",
                 "encode_kwargs": {"max_value": num_patterns + 1},
@@ -194,6 +202,8 @@ if __name__ == "__main__":
     # CLUSTER_CODE = "spherical-kmean-16"
     # SOURCE_DATASET = f"tcga-breast-idc-lob"
     # WSI_FEATURE_CODE = "dH-n-w#dC-onehot"
+    # # WSI_FEATURE_CODE = "C"
+    # WSI_FEATURE_CODE = "dH-n-w"
     # FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
     # SPLIT_INFO_PATH = f"{PWD}/data/splits/{DATA_SPLIT_CODE}.dat"
 
@@ -207,6 +217,8 @@ if __name__ == "__main__":
         f"{DATA_SPLIT_CODE}/{FEATURE_CODE}/"
         f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/"
     )
+
+    # *
 
     if WSI_FEATURE_CODE is not None:
         arg_parser = H2TArgumentParser(
