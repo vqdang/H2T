@@ -100,16 +100,16 @@ class H2TArgumentParser(CMDArgumentParser):
         }
         self.DATASET_MODE = "single"
         self.CLUSTER_DIR = (
-            f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
-            # "/root/lsf_workspace/projects/atlas/media-v1/clustering/"
+            # f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
+            "/root/lsf_workspace/projects/atlas/media-v1/clustering/"
             f"{self.CLUSTER_CODE}/{self.SOURCE_DATASET}/{self.FEATURE_CODE}/"
         )
 
     def generate_feature_path(self, sample_info, projection_code):
         subset_code, wsi_code = sample_info
         path = (
-            f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
-            # "/root/lsf_workspace/projects/atlas/media-v1/clustering/"
+            # f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
+            "/root/lsf_workspace/projects/atlas/media-v1/clustering/"
             f"{self.CLUSTER_CODE}/{self.SOURCE_DATASET}/{self.FEATURE_CODE}/features/"
             f"{projection_code}/{subset_code}/{wsi_code}"
         )
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument("--FEATURE_CODE", type=str)
     parser.add_argument("--CLUSTER_CODE", type=str, default="")
     parser.add_argument("--SOURCE_DATASET", type=str, default="")
-    parser.add_argument("--WSI_FEATURE_CODE", type=str, default=None)
+    parser.add_argument("--WSI_FEATURE_CODE", type=str, default="")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -215,7 +215,7 @@ if __name__ == "__main__":
         # f"{PWD}/experiments/downstream/"
         "/root/lsf_workspace/projects/atlas/media-v1/downstream-x/"
         f"{DATA_SPLIT_CODE}/{FEATURE_CODE}/"
-        f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/"
+        f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/{WSI_FEATURE_CODE}/"
     )
 
     # *
