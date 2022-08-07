@@ -154,22 +154,6 @@ if __name__ == "__main__":
 
     # * ----
 
-    # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-    # os.environ["JOBLIB_TEMP_FOLDER"] = f"{PWD}/experiments/debug/cache/"
-
-    # SOURCE_DATASET = args.SOURCE_DATASET
-    # SELECTION_DIR = None
-    # FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/{args.FEATURE_CODE}/"
-    # CLINICAL_ROOT_DIR = f"{PWD}/data/clinical/"
-    # RECIPE_PATH = f"{PWD}/extract/params/spherical_kmean.yaml"
-
-    # # SAVE_DIR = (
-    # #     f"{PWD}/experiments/remote/clustering/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
-    # # )
-
-    # SAVE_DIR = f"{PWD}/experiments/debug/cluster/{METHOD_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
-    # ----
-
     os.environ["JOBLIB_TEMP_FOLDER"] = f"/root/cache/"
     PWD = "/root/local_storage/storage_0/workspace/h2t/h2t/"
 
@@ -207,6 +191,7 @@ if __name__ == "__main__":
         CLINICAL_ROOT_DIR, FEATURE_ROOT_DIR, dataset_identifiers
     )
     sample_info_list, _ = retrieve_subset(DATASET_CONFIG, dataset_sample_info)
+    log_info(f"Number of samples: {len(sample_info_list)})")
 
     # * Parsing the config
     default_seed = 5

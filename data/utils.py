@@ -69,12 +69,11 @@ def retrieve_subset(subset_info, dataset_sample_info):
         identifier = "/".join(identifier)
         identifer_samples = dataset_sample_info[identifier]
         samples.extend(identifer_samples)
-    
-    #
-    compositions = np.unique([v[1] for v in samples], return_counts=True)
-    print(identifier)
-    print(*list(zip(*compositions)), sep="\n")
-    print("----")
+
+        compositions = np.unique([v[1] for v in identifer_samples], return_counts=True)
+        print(identifier)
+        print(*list(zip(*compositions)), sep="\n")
+        print("----")
     #
 
     # filter samples with labels that are not within selected
