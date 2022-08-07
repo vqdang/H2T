@@ -20,8 +20,8 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 )
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
-from misc.reader import get_reader
-from misc.utils import (
+from h2t.misc.reader import get_reader
+from h2t.misc.utils import (
     convert_pytorch_checkpoint,
     difference_filename,
     dispatch_processing,
@@ -79,7 +79,7 @@ def get_model_class(arch_name):
     """
 
     if arch_name == "resnet50":
-        from models.backbone import ResNetExt
+        from h2t.models.backbone import ResNetExt
 
         BackboneModel = ResNetExt.resnet50
     else:
