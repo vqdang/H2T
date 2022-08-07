@@ -273,7 +273,7 @@ if __name__ == "__main__":
     num_batches = len(loader)
     num_iters = num_batches * num_epochs
 
-    mkdir(f"{SAVE_DIR}/")
+    mkdir(f"{SAVE_DIR}/models/")
     if scaler:
         joblib.dump(scaler, f"{SAVE_DIR}/scaler.dat")
 
@@ -290,4 +290,4 @@ if __name__ == "__main__":
 
         if isconverge and epoch >= num_epochs:
             break
-        joblib.dump(model, f"{SAVE_DIR}/model-{epoch:0.3d}.dat")
+        joblib.dump(model, f"{SAVE_DIR}/models/model-{epoch:03d}.dat")
