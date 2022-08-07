@@ -9,14 +9,16 @@ from h2t.misc.utils import center_pad_to_shape
 class SequenceDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        root_dir,
-        sample_info_list,
+        sample_info_list=None,
+        generate_feature_path=None,
+        generate_selection_path=None,
         run_mode="train",
         setup_augmentor=True,
-        selection_dir=None,
         **kwargs,
     ):
         """ """
+        assert sample_info_list
+        assert generate_feature_path
 
         self.step_shape = 256
         self.kwargs = kwargs
@@ -24,6 +26,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         self.selection_dir = selection_dir
 
         self.run_mode = run_mode
+        self.generate_feature_path = generate_feature_path
+        self.generate_selection_path = generate_selection_path
         self.sample_info_list = sample_info_list
 
         self.id = 0
@@ -88,13 +92,12 @@ class SequenceDataset(torch.utils.data.Dataset):
 
     def load_sequence(self, subject_info):
         subset_code, slide_code = subject_info
-        slide_path = f"{self.root_dir}/{subset_code}/{slide_code}"
-
+        slide_path = self.generate_feature_path(subject_info)
         features_list = np.load(f"{slide_path}.features.npy", mmap_mode="r")
         position_list = np.load(f"{slide_path}.position.npy", mmap_mode="r")
 
-        if self.selection_dir:
-            selection_path = f"{self.selection_dir}/{subset_code}/{slide_code}.npy"
+        if self.generate_selection_path:
+            selection_path = self.generate_selection_path(subject_info)
             selections = np.load(selection_path)
             selections = np.array(selections > 0)
             features_list = features_list[selections]
@@ -144,10 +147,10 @@ class SequenceDataset(torch.utils.data.Dataset):
 class FeatureDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        root_dir,
-        sample_info_list,
+        sample_info_list=None,
+        generate_feature_path=None,
+        generate_selection_path=None,
         run_mode="train",
-        selection_dir=None,
         setup_augmentor=True,
         feature_codes=None,
         target_shape=None,
@@ -164,10 +167,16 @@ class FeatureDataset(torch.utils.data.Dataset):
                 to `(512, 512)` when `mpp=0.50` or `(1024, 1024)` when `mpp=0.25`.
 
         """
+        assert sample_info_list
+        assert generate_feature_path
+
         self.target_shape = target_shape
-        self.root_dir = root_dir
+        self.feature_codes = feature_codes
+
         self.run_mode = run_mode
         self.sample_info_list = sample_info_list
+        self.generate_feature_path = generate_feature_path
+        self.generate_selection_path = generate_selection_path
 
         self.id = 0
         if setup_augmentor:
@@ -185,27 +194,31 @@ class FeatureDataset(torch.utils.data.Dataset):
         return len(self.sample_info_list)
 
     def _getitem(self, idx):
-        (subset_code, slide_code), label = self.sample_info_list[idx]
+        sample_info, label = self.sample_info_list[idx]
 
         sample_data = {
             "label": label,
         }
 
         features = []
-        for code in self.feature_codes:
-            path = f"{self.root_dir}/{code}/{subset_code}/{slide_code}.npy"
-            if "dC" in code:
+        for feature_code in self.feature_codes:
+            if "dC" not in feature_code:
+                slide_root_path = self.generate_feature_path(sample_info, feature_code)
+                path = f"{slide_root_path}.npy"
+                features.append(np.load(path).flatten())
+            else:
+                slide_root_path = self.generate_feature_path(sample_info, "dC")
+                path = f"{slide_root_path}.npy"
                 img = np.load(path)
                 # center pad to fix size output
                 img = center_pad_to_shape(img, self.target_shape, cval=0)
                 shape_augs = self.shape_augs.to_deterministic()
                 img = shape_augs.augment_image(img).copy()
                 sample_data["img"] = img
-            features.append(np.load(path).flatten())
 
         if len(features) > 0:
             features = np.concatenate(features, axis=0)
-
+        sample_data["features"] = features
         return sample_data
 
     @staticmethod

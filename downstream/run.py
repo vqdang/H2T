@@ -6,7 +6,7 @@ import joblib
 import numpy as np
 import yaml
 
-from loader import SequenceDataset
+from h2t.downstream.loader import SequenceDataset, FeatureDataset
 from h2t.misc.utils import (
     flatten_list,
     load_yaml,
@@ -18,8 +18,16 @@ from h2t.misc.utils import (
 )
 from h2t.downstream.recipes.opt import ABCConfig
 
+
 class DatasetConstructor:
-    def __init__(self, root_dir, split_info):
+    def __init__(
+        self,
+        split_info=None,
+        generate_feature_path=None,
+        generate_selection_path=None,
+        dataset="sequence",
+        **kwargs,
+    ):
         """
         Attributes:
             root_dir (str): Path to root directory that contains the
@@ -36,17 +44,25 @@ class DatasetConstructor:
                 provides a valid path to sample to be read.
 
         """
+        assert dataset in ["sequence", "single"]
 
-        self.root_dir = root_dir
+        self.kwargs = kwargs
+        self.dataset = dataset
+        self.generate_feature_path = generate_feature_path
+        self.generate_selection_path = generate_selection_path
         self.split_info = split_info
 
     def __call__(self, run_mode=None, subset_name=None, setup_augmentor=None):
         selection_dir = None
-        ds = SequenceDataset(
-            root_dir=self.root_dir,
+        DatasetClass = {"sequence": SequenceDataset, "single": FeatureDataset}[
+            self.dataset
+        ]
+        ds = DatasetClass(
+            generate_feature_path=generate_feature_path,
+            generate_selection_path=generate_selection_path,
             sample_info_list=self.split_info[subset_name],
             run_mode=run_mode,
-            selection_dir=selection_dir,
+            **self.kwargs,
         )
         return ds
 
@@ -56,10 +72,10 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", type=str, default="0")
     parser.add_argument("--ARCH_CODE", type=str, default=None)
     parser.add_argument("--SPLIT_IDX", type=int, default=0)
-    parser.add_argument("--CLUSTER_CODE", type=str, default="[method=None]")
-    parser.add_argument("--SOURCE_DATASET", type=str, default="[sourceTissue=None]")
-    parser.add_argument("--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]")
-    parser.add_argument("--WSI_FEATURE_CODE", type=str, default="dH-w")
+    parser.add_argument("--CLUSTER_CODE", type=str, default="")
+    parser.add_argument("--SOURCE_DATASET", type=str, default="")
+    parser.add_argument("--FEATURE_CODE", type=str)
+    parser.add_argument("--WSI_FEATURE_CODE", type=str, default=None)
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -78,29 +94,59 @@ if __name__ == "__main__":
 
     # * debug
     # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/clam.yml"
+    # PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+    # FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/"
+    # SAVE_PATH = f"{PWD}/experiments/debug/"
+    # SPLIT_INFO_PATH = f"{PWD}/[normal-luad-lusc]_train=tcga_test=cptac.dat"
+    # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/probe-template.yml"
+    # # CLUSTER_DIR = f"{PWD}/{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    # CLUSTER_DIR = "/mnt/storage_0/workspace/h2t/h2t/experiments/debug/cluster/sample/tcga-lung-luad-lusc/[SWAV]-[mpp=0.50]-[512-256]/"
+
     PWD = "/mnt/storage_0/workspace/h2t/h2t/"
-    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/"
-    SAVE_PATH = f"{PWD}/experiments/debug/"
-    SPLIT_INFO_PATH = f"{PWD}/[normal-luad-lusc]_train=tcga_test=cptac.dat"
+    SAVE_PATH = f"{PWD}/experiments/debug/downstream/"
     TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/probe-template.yml"
-    # CLUSTER_DIR = f"{PWD}/{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
-    CLUSTER_DIR = "/mnt/storage_0/workspace/h2t/h2t/experiments/debug/cluster/sample/tcga-lung-luad-lusc/[SWAV]-[mpp=0.50]-[512-256]/"
-    # * LSF
-    # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/clam.yml"
-    # FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/"
+
+    SPLIT_CODE = "[idc-lob]_train=tcga"
+    CLUSTER_CODE = "spherical-kmean-16"
+    SOURCE_DATASET = f"tcga-breast-idc-lob"
+    WSI_FEATURE_CODE = "dH-n-w#dC-onehot"
+    FEATURE_CODE = "[SWAV]-[mpp=0.50]-[512-256]"
+    SPLIT_INFO_PATH = f"{PWD}/data/splits/{SPLIT_CODE}.dat"
     # SAVE_PATH = (
     #     # f"{PWD}/experiments/downstream/"
     #     "/root/lsf_workspace/projects/atlas/media-v1/downstream/"
-    #     f"{SOURCE_TISSUE}/{FEATURE_CODE}/{ROOT_DATA}/"
-    #     f"{CLUSTER_CODE}/{TASK_CODE}/{ARCH_CODE}/"
+    #     f"{SPLIT_CODE}/{FEATURE_CODE}/"
+    #     f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/"
     # )
-    # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/{ARCH_CODE}.yml"
-    # if TASK_CODE == "idc-lob":
-    #     SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga.dat"
-    # elif TASK_CODE == "idc-lob-ffpe":
-    #     SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga_ffpe.dat"
-    # elif TASK_CODE == "ccrcc-prcc-chrcc":
-    #     SPLIT_INFO_PATH = f"{PWD}/data/splits/[ccrcc-prcc-chrcc]_train=tcga.dat"
+    if WSI_FEATURE_CODE is not None:
+        DATASET_KWARGS = {
+            "feature_codes": WSI_FEATURE_CODE.split("#"),
+            "target_shape": [512, 512],
+        }
+        DATASET_MODE = "single"
+        CLUSTER_DIR = (
+            f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
+            f"{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+        )
+
+        def generate_feature_path(sample_info, projection_code):
+            subset_code, wsi_code = sample_info
+            path = (
+                f"/mnt/storage_0/workspace/h2t/h2t/experiments/remote/media-v1/clustering/"
+                f"{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/features/"
+                f"{projection_code}/{subset_code}/{wsi_code}"
+            )
+            return path
+    else:
+        # pointing to deep features
+        DATASET_KWARGS = {}
+        DATASET_MODE = "sequence"
+
+        def generate_feature_path(sample_info, feature_code):
+            subset_code, wsi_code = sample_info
+            path = "/root/dgx_workspace/h2t/features/"
+            return path
+    generate_selection_path = None
 
     # *
 
@@ -117,27 +163,25 @@ if __name__ == "__main__":
             cluster_config = load_yaml(f"{CLUSTER_DIR}/config.yaml")
             num_patterns = cluster_config["num_patterns"]
 
-            model_kwargs = paramset['model_kwargs']
-            model_kwargs['num_input_channels'] = metadata["num_features"] * num_patterns
+            model_kwargs = paramset["model_kwargs"]
+            model_kwargs["num_input_channels"] = metadata["num_features"] * num_patterns
 
             colocal_kwargs = {
-                'encode': None,
-                'encode_kwargs': {
-                    'max_value': num_patterns + 1
-                }
+                "encode": None,
+                "encode_kwargs": {"max_value": num_patterns + 1},
             }
-            if any('dC-raw' in v for v in WSI_FEATURE_CODES):
+            if any("dC-raw" in v for v in WSI_FEATURE_CODES):
                 WSI_FEATURE_CODES = "#".join(WSI_FEATURE_CODES)
-                WSI_FEATURE_CODES.replace('dC-raw', "")
+                WSI_FEATURE_CODES.replace("dC-raw", "")
                 WSI_FEATURE_CODES = WSI_FEATURE_CODES.split("#")
                 metadata["architecture_name"] = "cnn-probe"
-            elif any('dC' in v for v in WSI_FEATURE_CODES):
+            elif any("dC" in v for v in WSI_FEATURE_CODES):
                 colocal_kwargs["encode"] = "onehot"
                 metadata["architecture_name"] = "cnn-probe"
             else:
                 metadata["architecture_name"] = "linear-probe"
 
-            model_kwargs['colocal'] = colocal_kwargs
+            model_kwargs["colocal"] = colocal_kwargs
             metadata["projection_codes"] = WSI_FEATURE_CODES
             metadata["cluster_method"] = cluster_config
 
@@ -168,7 +212,11 @@ if __name__ == "__main__":
             "logging": True,
             "log_dir": f"{save_path}/model/",
             "create_dataset": DatasetConstructor(
-                f"{FEATURE_ROOT_DIR}/{FEATURE_CODE}/", data_split_info
+                split_info=data_split_info,
+                generate_feature_path=generate_feature_path,
+                generate_selection_path=generate_selection_path,
+                dataset=DATASET_MODE,
+                **DATASET_KWARGS,
             ),
             "model_config": model_config,
         }
