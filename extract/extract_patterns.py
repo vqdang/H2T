@@ -273,6 +273,10 @@ if __name__ == "__main__":
     num_batches = len(loader)
     num_iters = num_batches * num_epochs
 
+    mkdir(f"{SAVE_DIR}/")
+    if scaler:
+        joblib.dump(scaler, f"{SAVE_DIR}/scaler.dat")
+
     for epoch in range(num_epochs):
         log_info(f"Epoch {epoch}")
         pbar = tqdm(iterable=loader, total=num_batches, ascii=True, position=0)
@@ -286,8 +290,4 @@ if __name__ == "__main__":
 
         if isconverge and epoch >= num_epochs:
             break
-
-        mkdir(f"{SAVE_DIR}/")
-        joblib.dump(model, f"{SAVE_DIR}/model.dat")
-        if scaler:
-            joblib.dump(scaler, f"{SAVE_DIR}/scaler.dat")
+        joblib.dump(model, f"{SAVE_DIR}/model-{epoch:0.3d}.dat")
