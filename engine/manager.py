@@ -10,8 +10,8 @@ from tensorboardX import SummaryWriter
 from torch.nn import DataParallel  # TODO: switch to DistributedDataParallel
 from torch.utils.data import DataLoader
 
-from engine.engine import RunEngine
-from engine.utils import (check_log_dir, check_manual_seed, colored,
+from h2t.engine.engine import RunEngine
+from h2t.engine.utils import (check_log_dir, check_manual_seed, colored,
                           convert_pytorch_checkpoint)
 
 

@@ -1,0 +1,15 @@
+metadata:
+  option_name: "probe"
+  num_features: 2048
+
+optimizer_kwargs:
+  'lr' : 1.0e-4
+  'betas' : [0.9, 0.999]
+  'weight_decay' : 0.0
+
+loader_kwargs:
+  train: { 'batch_size' : 32, 'nr_procs' : 16}
+  infer: { 'batch_size' : 32, 'nr_procs' : 16}
+
+model_kwargs:
+  num_types: 2  # benign vs cancer, placeholder

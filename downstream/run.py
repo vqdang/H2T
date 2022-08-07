@@ -1,6 +1,5 @@
 import argparse
 import importlib
-import logging
 import os
 
 import joblib
@@ -8,7 +7,7 @@ import numpy as np
 import yaml
 
 from loader import SequenceDataset
-from misc.utils import (
+from h2t.misc.utils import (
     flatten_list,
     load_yaml,
     mkdir,
@@ -17,8 +16,7 @@ from misc.utils import (
     setup_logger,
     update_nested_dict,
 )
-from recipes.opt import ABCConfig
-
+from h2t.downstream.recipes.opt import ABCConfig
 
 class DatasetConstructor:
     def __init__(self, root_dir, split_info):
@@ -59,12 +57,8 @@ if __name__ == "__main__":
     parser.add_argument("--ARCH_CODE", type=str, default=None)
     parser.add_argument("--SPLIT_IDX", type=int, default=0)
     parser.add_argument("--CLUSTER_CODE", type=str, default="[method=None]")
-    parser.add_argument("--ROOT_DATA", type=str, default="[rootData=tcga]")
-    parser.add_argument("--TASK_CODE", type=str, default="idc-lob")
-    parser.add_argument("--SOURCE_TISSUE", type=str, default="[sourceTissue=None]")
-    parser.add_argument(
-        "--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]"
-    )
+    parser.add_argument("--SOURCE_DATASET", type=str, default="[sourceTissue=None]")
+    parser.add_argument("--FEATURE_CODE", type=str, default="[SWAV]-[mpp=0.50]-[512-256]")
     parser.add_argument("--WSI_FEATURE_CODE", type=str, default="dH-w")
     args = parser.parse_args()
 
@@ -78,33 +72,35 @@ if __name__ == "__main__":
     PWD = os.environ["PROJECT_WORKSPACE"]
     FEATURE_CODE = args.FEATURE_CODE
     CLUSTER_CODE = args.CLUSTER_CODE
-    ROOT_DATA = args.ROOT_DATA
-    SOURCE_TISSUE = args.SOURCE_TISSUE
-    TASK_CODE = args.TASK_CODE
+    SOURCE_DATASET = args.SOURCE_DATASET
     ARCH_CODE = args.ARCH_CODE
+    WSI_FEATURE_CODE = args.WSI_FEATURE_CODE
 
     # * debug
     # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/clam.yml"
-    # FEATURE_ROOT_DIR = "/mnt/storage_0/workspace/h2t/experiments/local/features/"
-    # SAVE_PATH = "experiments/debug/"
-    # SPLIT_INFO_PATH = "/mnt/storage_0/workspace/h2t/[normal-luad-lusc]_train=tcga_test=cptac.dat"
-
+    PWD = "/mnt/storage_0/workspace/h2t/h2t/"
+    FEATURE_ROOT_DIR = f"{PWD}/experiments/local/features/"
+    SAVE_PATH = f"{PWD}/experiments/debug/"
+    SPLIT_INFO_PATH = f"{PWD}/[normal-luad-lusc]_train=tcga_test=cptac.dat"
+    TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/probe-template.yml"
+    # CLUSTER_DIR = f"{PWD}/{CLUSTER_CODE}/{SOURCE_DATASET}/{FEATURE_CODE}/"
+    CLUSTER_DIR = "/mnt/storage_0/workspace/h2t/h2t/experiments/debug/cluster/sample/tcga-lung-luad-lusc/[SWAV]-[mpp=0.50]-[512-256]/"
     # * LSF
-    TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/clam.yml"
-    FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/"
-    SAVE_PATH = (
-        # f"{PWD}/experiments/downstream/"
-        "/root/lsf_workspace/projects/atlas/media-v1/downstream/"
-        f"{SOURCE_TISSUE}/{FEATURE_CODE}/{ROOT_DATA}/"
-        f"{CLUSTER_CODE}/{TASK_CODE}/{ARCH_CODE}/"
-    )
-    TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/{ARCH_CODE}.yml"
-    if TASK_CODE == "idc-lob":
-        SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga.dat"
-    elif TASK_CODE == "idc-lob-ffpe":
-        SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga_ffpe.dat"
-    elif TASK_CODE == "ccrcc-prcc-chrcc":
-        SPLIT_INFO_PATH = f"{PWD}/data/splits/[ccrcc-prcc-chrcc]_train=tcga.dat"
+    # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/clam.yml"
+    # FEATURE_ROOT_DIR = "/root/dgx_workspace/h2t/features/"
+    # SAVE_PATH = (
+    #     # f"{PWD}/experiments/downstream/"
+    #     "/root/lsf_workspace/projects/atlas/media-v1/downstream/"
+    #     f"{SOURCE_TISSUE}/{FEATURE_CODE}/{ROOT_DATA}/"
+    #     f"{CLUSTER_CODE}/{TASK_CODE}/{ARCH_CODE}/"
+    # )
+    # TRAINING_CONFIG_PATH = f"{PWD}/downstream/params/{ARCH_CODE}.yml"
+    # if TASK_CODE == "idc-lob":
+    #     SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga.dat"
+    # elif TASK_CODE == "idc-lob-ffpe":
+    #     SPLIT_INFO_PATH = f"{PWD}/data/splits/[idc-lob]_train=tcga_ffpe.dat"
+    # elif TASK_CODE == "ccrcc-prcc-chrcc":
+    #     SPLIT_INFO_PATH = f"{PWD}/data/splits/[ccrcc-prcc-chrcc]_train=tcga.dat"
 
     # *
 
@@ -112,12 +108,45 @@ if __name__ == "__main__":
 
     # * ------
 
-    paramset = load_yaml(TRAINING_CONFIG_PATH)
+    def retrieve_config():
+        paramset = load_yaml(TRAINING_CONFIG_PATH)
+        if WSI_FEATURE_CODE is not None:
+            metadata = paramset["metadata"]
+            WSI_FEATURE_CODES = WSI_FEATURE_CODE.split("#")
+
+            cluster_config = load_yaml(f"{CLUSTER_DIR}/config.yaml")
+            num_patterns = cluster_config["num_patterns"]
+
+            model_kwargs = paramset['model_kwargs']
+            model_kwargs['num_input_channels'] = metadata["num_features"] * num_patterns
+
+            colocal_kwargs = {
+                'encode': None,
+                'encode_kwargs': {
+                    'max_value': num_patterns + 1
+                }
+            }
+            if any('dC-raw' in v for v in WSI_FEATURE_CODES):
+                WSI_FEATURE_CODES = "#".join(WSI_FEATURE_CODES)
+                WSI_FEATURE_CODES.replace('dC-raw', "")
+                WSI_FEATURE_CODES = WSI_FEATURE_CODES.split("#")
+                metadata["architecture_name"] = "cnn-probe"
+            elif any('dC' in v for v in WSI_FEATURE_CODES):
+                colocal_kwargs["encode"] = "onehot"
+                metadata["architecture_name"] = "cnn-probe"
+            else:
+                metadata["architecture_name"] = "linear-probe"
+
+            model_kwargs['colocal'] = colocal_kwargs
+            metadata["projection_codes"] = WSI_FEATURE_CODES
+            metadata["cluster_method"] = cluster_config
+
+        return paramset
 
     def run_one_split_with_param_set(
         save_path: str, data_split_info: dict, param_kwargs: dict
     ):
-        run_paramset = paramset.copy()
+        run_paramset = retrieve_config()
         update_nested_dict(run_paramset, param_kwargs)
         update_nested_dict(run_paramset, {"seed": seed})
 
@@ -144,7 +173,7 @@ if __name__ == "__main__":
             "model_config": model_config,
         }
 
-        from engine.manager import RunManager
+        from h2t.engine.manager import RunManager
 
         trainer = RunManager(**run_kwargs)
         trainer.run()
