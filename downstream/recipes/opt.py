@@ -23,7 +23,7 @@ def get_architecture(model_code: str, **kwargs):
     elif model_code == "transformer-2":
         from h2t.models.mil.transformer import Transformer as Arch
     elif model_code == "clam":
-        from models.mil.clam import CLAM_SB as Arch
+        from h2t.models.mil.clam import CLAM_SB as Arch
     elif model_code == "linear-probe":
         from h2t.models.probe import Probe as Arch
     elif model_code == "cnn-probe":

@@ -22,8 +22,6 @@ class SequenceDataset(torch.utils.data.Dataset):
 
         self.step_shape = 256
         self.kwargs = kwargs
-        self.root_dir = root_dir
-        self.selection_dir = selection_dir
 
         self.run_mode = run_mode
         self.generate_feature_path = generate_feature_path
