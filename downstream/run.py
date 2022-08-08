@@ -83,7 +83,8 @@ class MILArgumentParser(CMDArgumentParser):
     def generate_feature_path(self, sample_info):
         subset_code, wsi_code = sample_info
         path = (
-            f"/mnt/storage_0/workspace/h2t/h2t/experiments/local/features/"
+            # f"/mnt/storage_0/workspace/h2t/h2t/experiments/local/features/"
+            "/root/dgx_workspace/h2t/features/"
             f"{self.FEATURE_CODE}/{subset_code}/{wsi_code}"
         )
         return path
@@ -166,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("--FEATURE_CODE", type=str)
     parser.add_argument("--CLUSTER_CODE", type=str, default="")
     parser.add_argument("--SOURCE_DATASET", type=str, default="")
-    parser.add_argument("--WSI_FEATURE_CODE", type=str, default="")
+    parser.add_argument("--WSI_FEATURE_CODE", type=str, default=None)
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -213,14 +214,14 @@ if __name__ == "__main__":
     SPLIT_INFO_PATH = f"{PWD}/data/splits/{DATA_SPLIT_CODE}.dat"
     SAVE_PATH = (
         # f"{PWD}/experiments/downstream/"
-        "/root/lsf_workspace/projects/atlas/media-v1/downstream-x/"
+        "/root/lsf_workspace/projects/atlas/media-v1/downstream-y/"
         f"{DATA_SPLIT_CODE}/{FEATURE_CODE}/"
-        f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/{WSI_FEATURE_CODE}/"
+        f"{SOURCE_DATASET}/{CLUSTER_CODE}/{ARCH_CODE}/"
     )
-
     # *
 
     if WSI_FEATURE_CODE is not None:
+        SAVE_PATH = f"{SAVE_PATH}/{WSI_FEATURE_CODE}/"
         arg_parser = H2TArgumentParser(
             PWD=PWD,
             FEATURE_CODE=FEATURE_CODE,
