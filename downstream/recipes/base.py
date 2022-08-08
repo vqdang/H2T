@@ -59,10 +59,13 @@ class ABCRecipe(ABC):
 
     @staticmethod
     def recipe(model_code):
-        from .mil import CLAMRecipe, TransformerRecipe
+        from h2t.downstream.recipes.mil import CLAMRecipe, TransformerRecipe
+        from h2t.downstream.recipes.probe import ProbeRecipe
         if "clam" in model_code:
             return CLAMRecipe
         elif "transformer" in model_code:
             return TransformerRecipe
+        elif "probe" in model_code:
+            return ProbeRecipe
         else:
             assert False    

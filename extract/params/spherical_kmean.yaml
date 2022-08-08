@@ -1,0 +1,13 @@
+
+random_seed: Null
+num_patterns: Null
+num_epochs: Null
+
+num_loader_workers: 8
+num_subjects_per_batch: 16
+# default number for mpp=0.50, set to 512 if its mpp=0.25
+num_samples_per_subject: 256
+
+clustering_method: "spherical_kmeans"
+clustering_kwargs:
+  reassignment_ratio: 0.1

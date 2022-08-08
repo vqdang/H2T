@@ -6,7 +6,7 @@ sys.path.append(os.environ["TIATOOLBOX"])
 
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader, WSIMeta
 
-from misc.utils import imread
+from h2t.misc.utils import imread
 
 
 def get_reader(img_path) -> WSIReader:
