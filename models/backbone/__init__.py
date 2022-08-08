@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .convnext import ConvNeXt, LayerNorm
-from .convnext import Block as ConvNeXtBlock
+from h2t.models.backbone.convnext import ConvNeXt, LayerNorm
+from h2t.models.backbone.convnext import Block as ConvNeXtBlock
 
 from torchvision.models.resnet import Bottleneck as ResNetBottleneck
 from torchvision.models.resnet import ResNet

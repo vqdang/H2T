@@ -7,7 +7,7 @@ from scipy.stats import mode as major_value
 from sklearn.metrics import confusion_matrix
 import operator
 
-from misc.utils import center_pad_to_shape, cropping_center
+from h2t.misc.utils import center_pad_to_shape, cropping_center
 
 
 

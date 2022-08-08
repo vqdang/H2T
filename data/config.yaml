@@ -317,3 +317,11 @@
         "Clear cell adenocarcinoma, NOS": 0
         "Papillary adenocarcinoma, NOS": 1
         "Renal cell carcinoma, chromophobe type": 2
+
+"[ccrcc-prcc-chrcc]_train=tcga_ffpe":
+  train-valid:
+    - identifiers: ["tcga/kidney/ffpe"]
+      labels:
+        "Clear cell adenocarcinoma, NOS": 0
+        "Papillary adenocarcinoma, NOS": 1
+        "Renal cell carcinoma, chromophobe type": 2

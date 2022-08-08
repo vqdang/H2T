@@ -3,8 +3,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .backbone import ResNetExt
-from .encoding import OnehotEncoding, SineEncoding
+from h2t.models.backbone import ResNetExt
+from h2t.models.encoding import OnehotEncoding, SineEncoding
 
 
 class ColocalModel(nn.Module):
@@ -51,7 +51,7 @@ class Probe(nn.Module):
     def __init__(
         self,
         num_input_channels=2048,
-        num_output_channels=2,
+        num_types=2,
         mode='linear',
         colocal=None,
     ):
@@ -66,7 +66,7 @@ class Probe(nn.Module):
         if mode == 'linear':
             self.clf = nn.Sequential(
                 nn.BatchNorm1d(num_input_channels),
-                nn.Linear(num_input_channels, num_output_channels)
+                nn.Linear(num_input_channels, num_types)
             )
         else:
             self.clf = nn.Sequential(
@@ -74,7 +74,7 @@ class Probe(nn.Module):
                 nn.Linear(num_input_channels, 128),
                 nn.Dropout(p=0.5),
                 nn.ReLU(),
-                nn.Linear(num_input_channels, num_output_channels)
+                nn.Linear(num_input_channels, num_types)
             )
         return
 

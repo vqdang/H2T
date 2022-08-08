@@ -6,7 +6,7 @@ import os
 from collections import OrderedDict
 import pandas as pd
 
-from misc.utils import load_json, recur_find_ext
+from h2t.misc.utils import load_json, recur_find_ext
 
 
 class TCGA(object):

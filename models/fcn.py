@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from .utils import UpSample2x
-from .backbone import ConvNeXtExt, ConvNeXtBlock, ResNetExt
+from h2t.models.utils import UpSample2x
+from h2t.models.backbone import ConvNeXtExt, ConvNeXtBlock, ResNetExt
 
 
 class FCN_ConvNext(nn.Module):

@@ -560,7 +560,7 @@ def log_info(msg):
     logging.info("{i} {m}".format(i="." * indentation_level, m=msg))
 
 
-def set_logger(path):
+def setup_logger(path):
     logging.basicConfig(level=logging.INFO)
     # * reset logger handler
     log_formatter = logging.Formatter(
@@ -673,3 +673,15 @@ def load_yaml(path):
         info = yaml.full_load(fptr)
     return info
 
+
+def save_yaml(path, info):
+    with open(path, 'w') as fptr:
+        yaml.dump(info, fptr, default_flow_style=False)
+    return None
+
+
+def load_npy_tar(tar, path_in_tar):
+    bytesBuffer = BytesIO()
+    bytesBuffer.write(tar.extractfile(path_in_tar).read())
+    bytesBuffer.seek(0)
+    return np.load(bytesBuffer, allow_pickle=False)

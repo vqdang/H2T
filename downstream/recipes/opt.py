@@ -2,7 +2,7 @@ from abc import ABC
 from typing import List
 
 import torch.optim as optim
-from engine.callbacks.base import (
+from h2t.engine.callbacks.base import (
     AccumulateRawOutput,
     BaseCallbacks,
     PeriodicSaver,
@@ -11,23 +11,23 @@ from engine.callbacks.base import (
     TrackLr,
     TriggerEngine,
 )
-from engine.callbacks.logging import LoggingOutput
-from engine.engine import Events
+from h2t.engine.callbacks.logging import LoggingOutput
+from h2t.engine.engine import Events
 
-from .base import ABCRecipe
+from h2t.downstream.recipes.base import ABCRecipe
 
 
 def get_architecture(model_code: str, **kwargs):
     if model_code == "transformer-1":
-        from models.mil.transformer import Transformer as Arch
+        from h2t.models.mil.transformer import Transformer as Arch
     elif model_code == "transformer-2":
-        from models.mil.transformer import Transformer as Arch
+        from h2t.models.mil.transformer import Transformer as Arch
     elif model_code == "clam":
-        from models.mil.clam import CLAM_SB as Arch
+        from h2t.models.mil.clam import CLAM_SB as Arch
     elif model_code == "linear-probe":
-        from models.probe import Probe as Arch
+        from h2t.models.probe import Probe as Arch
     elif model_code == "cnn-probe":
-        from models.probe import Probe as Arch
+        from h2t.models.probe import Probe as Arch
     else:
         assert False
     return Arch(**kwargs)
@@ -139,7 +139,9 @@ class ABCConfig(ABC):
                 "reset_per_run": True,
                 # callbacks are run according tothe list order of the event
                 "callbacks": {
-                    Events.STEP_COMPLETED: [AccumulateRawOutput(),],
+                    Events.STEP_COMPLETED: [
+                        AccumulateRawOutput(),
+                    ],
                     Events.EPOCH_COMPLETED: [
                         ProcessAccumulatedRawOutput(
                             lambda a, b: self.recipe.process_accumulated_step_output(
@@ -177,7 +179,7 @@ class ABCConfig(ABC):
 
         recipe_info = paramset["metadata"]
         if recipe_info["option_name"] == "linear":
-            OptionClass = ABCConfig
+            OptionClass = ProbeConfig
         else:
             OptionClass = ABCConfig
 
@@ -193,3 +195,44 @@ class ABCConfig(ABC):
         )
         config_ = {"phase_list": config_.phases(), "run_engine": config_.engines()}
         return config_
+
+
+class ProbeConfig(ABCConfig):
+    def phases(self):
+        phase_config = [
+            {
+                "run_info": {
+                    # may need more dynamic for each network
+                    "net": {
+                        "desc": lambda: get_architecture(
+                            self.model_code, **self.model_kwargs
+                        ),
+                        "optimizer": [
+                            optim.Adam,
+                            {
+                                # should match keyword for parameters
+                                # within the optimizer
+                                "lr": 1.0e-4,  # initial learning rate,
+                                "betas": (0.9, 0.999),
+                                # 'weight_decay': 1.0e-5,
+                            },
+                        ],
+                        # learning rate scheduler
+                        "lr_scheduler": (
+                            lambda opt, n_iter: optim.lr_scheduler.StepLR(opt, 10000)
+                        ),
+                        # 'lr_scheduler': lambda opt, n_iter: \
+                        #     optim.lr_scheduler.CosineAnnealingLR(opt, 50),
+                        "extra_info": {},
+                        # path to load, -1 to auto load checkpoint
+                        # from previous phase,
+                        # None to start from scratch
+                        "pretrained": None,
+                    },
+                },
+                "target_info": {"gen": (None, {}), "viz": (None, {})},
+                "loader": self.loader_kwargs,
+                "nr_epochs": 50,
+            },
+        ]
+        return phase_config
