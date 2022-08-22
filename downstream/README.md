@@ -34,8 +34,8 @@ Followings are the main components:
     - `TRAINING_CONFIG_CODE`: Name of the training config file. The file must be defined within `downstream/params`.
     - `SPLIT_IDX`: The index of the data split within `DATA_SPLIT_CODE` to train on.
     - `ARCH_CODE`: The name of the model architecture defined within `get_architecture.py` within `downstreams/recipes/opt.py`. Following architectures are available
-        - `clam`: Baseline CLAM model, check [clam.yml](./params/transformer-1.yml) and [CLAM definition](../models/mil/clam.py)for details.
-        - `transformer-1`: Baseline Transformer model with no full self-attention, check [transformer-1.yml](./params/transformer-1.yml) and [Transformer definition](../models/mil/transformer.py)for details.
-        - `transformer-2`: Baseline Transformer model with an additional full self-attention, check [transformer-2.yml](./params/transformer-1.yml) and [Transformer definition](../models/mil/transformer.py)for details.
+        - `clam`: Baseline CLAM model, check [clam.yml](./params/transformer-1.yml) and [CLAM definition](../models/mil/clam.py) for details.
+        - `transformer-1`: Baseline Transformer model with no full self-attention, check [transformer-1.yml](./params/transformer-1.yml) and [Transformer definition](../models/mil/transformer.py) for details.
+        - `transformer-2`: Baseline Transformer model with an additional full self-attention, check [transformer-2.yml](./params/transformer-1.yml) and [Transformer definition](../models/mil/transformer.py) for details.
         - `probe`: Linear probing for H2T representation. If `WSI_FEATURE_CODE` contains colocalization projection via pattern assignment maps (PAMs),  denoted by `dC`, `probe` will be expanded to `cnn-probe`. Here, a CNN is attached on ontop the PAMs before being merged with other H2T projections for linear probing. Otherwise, `probe` is `linear-probe`.
 
