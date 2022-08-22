@@ -23,10 +23,9 @@ Followings are the main components:
     - How the often the validation is conducted.
     - How the model is saved.
     - etc.
-https://github.com/vqdang/H2T/tree/add-readme-instruction#experimental-api
-https://github.com/vqdang/H2T/blob/add-readme-instruction/#experimental-api
+
 - `run.py`: the entry file to actually start the running process.
-    - `DATA_SPLIT_CODE`: Same as `<DATA-SPLIT-CODE>` in [main readme](./#experimental-api)
+    - `DATA_SPLIT_CODE`: Same as `<DATA-SPLIT-CODE>` in [main readme](../README.md#experimental-api)
     - `TRAINING_CONFIG_CODE`: 
     - `SPLIT_IDX`: 
     - `ARCH_CODE`: 
