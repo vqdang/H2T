@@ -16,8 +16,8 @@ in the [paper](https://arxiv.org/abs/2202.07001).
     - `FEATURE_CODE`: Same as `<FEATURE-CODE>` described in [main readme](../README.md#experimental-api).
 
     - `NUM_EPOCHS`: Number of epochs for mining the patterns.
-    - `SCALER`: Default to `False`. A flag to standardize the
-    each patch feature using the mean and standard **across the entire** `SOURCE_DATASET`.
+    - `SCALER`: Default to `False`. Standardizing 
+    each patch feature using the mean and standard **across the entire** `SOURCE_DATASET` or not.
     - `NUM_CLUSTERS`: Number of protypical patterns to mine for.
 
 - `extract_pattern_projection.py`:
