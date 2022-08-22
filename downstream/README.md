@@ -28,7 +28,7 @@ Followings are the main components:
     - `DATA_SPLIT_CODE`: Same as `<DATA-SPLIT-CODE>` described in [main readme](../README.md#experimental-api)
     - `FEATURE_CODE`: Same as `<FEATURE-CODE>` in [main readme](../README.md#experimental-api)
     - `CLUSTER_CODE`: Same as `<CLUSTERING-METHOD-CODE>` in [main readme](../README.md#experimental-api)
-    - `SOURCE_DATASET`: Same as `<SOURCE_DATASET>` in [main readme](../README.md#experimental-api). If `ARCH_CODE` is not used for H2T projection (i.e. `probe`), then please set it to `None`.
+    - `SOURCE_DATASET`: Same as `<SOURCE-DATASET>` in [main readme](../README.md#experimental-api). If `ARCH_CODE` is not used for H2T projection (i.e. `probe`), then please set it to `None`.
     - `WSI_FEATURE_CODE`: A code name for a set of `<WSI-PROJECTION-CODE>` which is defined in [main readme](../README.md#experimental-api) to be used as H2T representation. `#` is a delimiter for each `<WSI-PROJECTION-CODE>`. For example, `dC-onehot#dH-n-w` denotes a H2T representation obtained by `dC-onehot` and `dH-n-w`.
 
     - `TRAINING_CONFIG_CODE`: Name of the training config file. The file must be defined within `downstream/params`.
