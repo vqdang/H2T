@@ -96,7 +96,7 @@ The names as well as the tissue types of and within these source datasets are de
 - `<CLUSTERING-METHOD-CODE>:` Name of the clustering method. For examples, 'spherical-kmean-8'
 - `<WSI-PROJECTION-CODE>`: Name of the H2T projection method.
 - `<DOWNSTREAM-METHOD-CODE>`: Name of the method utilized for WSI classifcations. In case of H2T linear probing, it
-is `<CLUSTERING-METHOD-CODE>/<WSI-PROJECTION-CODE>`.
+is `<CLUSTERING-METHOD-CODE>/<WSI-PROJECTION-CODE>/<DOWNSTREAM-METHOD-CODE>`.
 
 # Citation
 
