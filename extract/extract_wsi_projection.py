@@ -271,8 +271,10 @@ class WSIProjector(object):
 
                     - For `{SELECTION}`, `{METHOD}` includes:
                             - "n": No selection, return all.
-                            - "t": For each pattern, within their assigned patches, select
+                            - "ot": For each pattern, within their assigned patches, select
                             patches that have their distances larger than a threshold.
+                            - "it": For each pattern, within their assigned patches, select
+                            patches that have their distances within a threshold.
                             - "k": For each pattern, within their assigned patches, select
                             patches that are the closest to it.
                             - "fk": For each pattern, within their assigned patches, select
