@@ -15,8 +15,8 @@ from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor, WSIStreamDat
 from tiatoolbox.models.abc import ModelABC
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
 
-from misc.reader import get_reader
-from misc.utils import (
+from h2t.misc.reader import get_reader
+from h2t.misc.utils import (
     convert_pytorch_checkpoint,
     difference_filename,
     imread,
@@ -26,7 +26,7 @@ from misc.utils import (
     rm_n_mkdir,
     rmdir,
 )
-from models.utils import crop_op
+from h2t.models.utils import crop_op
 
 
 class XReader(WSIStreamDataset):
@@ -71,9 +71,9 @@ def get_model_class(arch_name):
     """
 
     if arch_name == "fcn-convnext":
-        from models.fcn import FCN_ConvNext as Arch
+        from h2t.models.fcn import FCN_ConvNext as Arch
     elif arch_name == "fcn-resnet":
-        from models.fcn import FCN_ResNet as Arch
+        from h2t.models.fcn import FCN_ResNet as Arch
     else:
         assert False, f"Unknown class architecture with alias `{arch_name}`."
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument("--gpu", type=str, default=None)
     parser.add_argument("--tissue", type=str, default="breast")
-    parser.add_argument("--arch_name", type=str, default="fcn-resnet")
+    parser.add_argument("--arch_name", type=str, default="fcn-convnext")
     parser.add_argument("--JOB_ID", type=int, default=0)
     parser.add_argument("--START_IDX", type=int, default=0)
     parser.add_argument("--END_IDX", type=int, default=2)

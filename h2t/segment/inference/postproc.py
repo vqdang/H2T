@@ -15,8 +15,8 @@ sys.path.append(os.environ["TIATOOLBOX"])
 import matplotlib.pyplot as plt
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
-from misc.reader import get_reader
-from misc.utils import imwrite, mkdir, recur_find_ext, dispatch_processing, rm_n_mkdir
+from h2t.misc.reader import get_reader
+from h2t.misc.utils import imwrite, mkdir, recur_find_ext, dispatch_processing, rm_n_mkdir
 
 
 def process_tissue(
