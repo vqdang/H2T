@@ -20,7 +20,7 @@ pip install -r requirements.txt
 make it in line with your local cuda version (or vice versa).
 
 
-This framwork involves multiple pipelines where each pipeline usually can be a repository in and of itself (such as tissue segmentation for image patches, handcrafted/deep feature extraction for WSI, etc.). To make the code more organized, each of these pipeline have been structured in a self-contained directory where shared functions are refactored out. The entire repository is structured in a monolithic manner. To work with many inter-dependency import, we
+This framwork involves multiple pipelines where each pipeline usually can be a repository in and of itself (such as tissue segmentation for image patches, handcrafted/deep feature extraction for WSI, etc.). To make the code more organized, each of these pipeline has been structured in a self-contained directory where shared functions are refactored out. The entire repository is structured in a monolithic manner. To work with many inter-dependency import, we
 turn the project into an **editable package** by the following command
 
 ```
