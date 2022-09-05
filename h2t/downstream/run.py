@@ -52,7 +52,12 @@ class DatasetConstructor:
         self.generate_selection_path = generate_selection_path
         self.split_info = split_info
 
-    def __call__(self, run_mode=None, subset_name=None, setup_augmentor=None):
+    def __call__(
+        self,
+        run_mode: str = None,
+        subset_name: str = None,
+        setup_augmentor: bool = False,
+    ):
         selection_dir = None
         DatasetClass = {"sequence": SequenceDataset, "single": FeatureDataset}[
             self.dataset
@@ -62,16 +67,18 @@ class DatasetConstructor:
             generate_selection_path=self.generate_selection_path,
             sample_info_list=self.split_info[subset_name],
             run_mode=run_mode,
+            setup_augmentor=setup_augmentor,
             **self.kwargs,
         )
         return ds
 
 
-class CMDArgumentParser():
+class CMDArgumentParser:
     def __init__(self, **kwargs):
         self.generate_selection_path = None
         for key in kwargs:
             setattr(self, key, kwargs[key])
+
 
 class MILArgumentParser(CMDArgumentParser):
     def __init__(self, **kwargs):
@@ -91,6 +98,7 @@ class MILArgumentParser(CMDArgumentParser):
 
     def retrieve_paramset(self):
         return load_yaml(self.TRAINING_CONFIG_PATH)
+
 
 class H2TArgumentParser(CMDArgumentParser):
     def __init__(self, **kwargs):
@@ -134,7 +142,7 @@ class H2TArgumentParser(CMDArgumentParser):
             model_kwargs["num_input_channels"] = 0
 
         if any("C" == v for v in wsi_projection_codes):
-            model_kwargs["num_input_channels"] += (num_patterns * num_patterns)
+            model_kwargs["num_input_channels"] += num_patterns * num_patterns
         if any("dC-raw" == v for v in wsi_projection_codes):
             colocal_kwargs = {
                 "encode": None,
@@ -228,7 +236,7 @@ if __name__ == "__main__":
             CLUSTER_CODE=CLUSTER_CODE,
             SOURCE_DATASET=SOURCE_DATASET,
             WSI_FEATURE_CODE=WSI_FEATURE_CODE,
-            TRAINING_CONFIG_PATH=TRAINING_CONFIG_PATH
+            TRAINING_CONFIG_PATH=TRAINING_CONFIG_PATH,
         )
     else:
         arg_parser = MILArgumentParser(
