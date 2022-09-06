@@ -45,7 +45,11 @@ You can download intermediate results and some pretrained models utilized in the
 - Deep features for [TCGA-Lung](), [TCGA-Breast](), [TCGA-Kidney](), [CPTAC-Lung]().
 - Tissue masks for [TCGA-Lung](), [TCGA-Breast](), [TCGA-Kidney](), [CPTAC-Lung]().
 - Pretrained models for feature extraction [Supervised-ResNet50](), [SWAV-ResNet50]().
-> **Note**: All data shared by us is licensed under a [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg license.
+> **Note**: All data shared by us is licensed under [![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa].
+
+[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
+[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
+[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
 ## Instructions
 1. Extract tissue area by navigating to `segment/inference`
