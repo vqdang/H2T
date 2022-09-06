@@ -8,7 +8,7 @@ either manually or automatedly via clustering.
 
 [Link](https://arxiv.org/abs/2202.07001) to the paper.
 
-# Setup Environment
+## Setup Environment
 
 Setup the python environment by doing the following
 ```
@@ -36,7 +36,18 @@ turn the project into an **editable package** by the following command
 pip install -e .
 ```
 
-# Instructions
+## Data Sharing
+> **Warning**
+> The links will come up somtimes later as we still yet figure out how to share this large amount of data (up to TB).
+We sorry for the inconvenience.
+
+You can download intermediate results and some pretrained models utilized in the paper by using following links
+- Deep features for [TCGA-Lung](), [TCGA-Breast](), [TCGA-Kidney](), [CPTAC-Lung]().
+- Tissue masks for [TCGA-Lung](), [TCGA-Breast](), [TCGA-Kidney](), [CPTAC-Lung]().
+- Pretrained models for feature extraction [Supervised-ResNet50](), [SWAV-ResNet50]().
+> **Note**: All data shared by us is licensed under a [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg license.
+
+## Instructions
 1. Extract tissue area by navigating to `segment/inference`
     - Run the `infer.py` for generating prediction
     - Run the `postproc.py` to turn the prediction into the tissue masks
@@ -59,7 +70,7 @@ by navigating to `data`
 
 > **Note**: For each step, please read the instruction within each associated folder.
 
-# Experimental API
+## Experimental API
 
 Here, we describe the how the experiment output is structured.
 ```
@@ -107,7 +118,7 @@ The names as well as the tissue types of and within these source datasets are de
 - `<DOWNSTREAM-METHOD-CODE>`: Name of the method utilized for WSI classifcations. In case of H2T linear probing, it
 is `<CLUSTERING-METHOD-CODE>/<WSI-PROJECTION-CODE>/<DOWNSTREAM-METHOD-CODE>`.
 
-# Citation
+## Citation
 
 If any part of this code is used, please give appropriate citation to our paper.
 
