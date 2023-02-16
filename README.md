@@ -6,7 +6,8 @@ Transformer mechanisms. The framework builds the WSI representation from a combi
 a set of input patches and a set of prototypical patterns. These patterns can be easily obtained
 either manually or automatedly via clustering. 
 
-[Link](https://arxiv.org/abs/2202.07001) to the paper.
+> **Note**: The paper is published at Medical Image Analysis
+> and can be accessed at: [[arxiv]](https://arxiv.org/abs/2202.07001) [[MedIA]](https://www.sciencedirect.com/science/article/pii/S136184152300004X)]
 
 ## Setup Environment
 
@@ -129,10 +130,18 @@ If any part of this code is used, please give appropriate citation to our paper.
 
 BibTex entry: 
 ```
-@article{vu2022H2T,
+@article{vu2022h2t,
   title={Handcrafted Histological Transformer (H2T): Unsupervised Representation of Whole Slide Images},
   author={Vu, Quoc Dang and Rajpoot, Kashif and Raza, Shan E Ahmed and Rajpoot, Nasir},
   journal={arXiv preprint arXiv:2202.07001},
   year={2022}
+}
+@article{vu2023h2t,
+  title={Handcrafted Histological Transformer (H2T): Unsupervised representation of whole slide images},
+  author={Vu, Quoc Dang and Rajpoot, Kashif and Raza, Shan E Ahmed and Rajpoot, Nasir},
+  journal={Medical Image Analysis},
+  pages={102743},
+  year={2023},
+  publisher={Elsevier}
 }
 ```
