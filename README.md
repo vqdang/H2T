@@ -37,14 +37,15 @@ pip install -e .
 ```
 
 ## Data Sharing
-> **Warning**
-> The links will come up somtimes later as we still yet figure out how to share this large amount of data (up to TB).
-We sorry for the inconvenience.
 
-You can download intermediate results and some pretrained models utilized in the paper by using following links
-- Deep features for [TCGA-Lung](), [TCGA-Breast](), [TCGA-Kidney](), [CPTAC-Lung]().
-- Tissue masks for [TCGA-Lung](), [TCGA-Breast](), [TCGA-Kidney](), [CPTAC-Lung]().
-- Pretrained models for feature extraction [Supervised-ResNet50](), [SWAV-ResNet50]().
+You can download intermediate results and some pretrained models utilized in the paper by following the instructions [here](https://warwick.ac.uk/fac/cross_fac/tia/data/h2t/).
+
+We share the followings data:
+- Deep features for TCGA-Lung, TCGA-Breast, TCGA-Kidney, CPTAC-Lung.
+- Tissue masks for TCGA-Lung, TCGA-Breast, TCGA-Kidney, CPTAC-Lung.
+- Pretrained models for feature extraction Supervised-ResNet50, SWAV-ResNet50.
+- Prototype patterns of tumorous or normal tissue that is from either breast, lung or kidney WSIs within TCGA or CPTAC dataset.
+
 > **Note**: All data shared by us is licensed under [![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa].
 
 [cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
