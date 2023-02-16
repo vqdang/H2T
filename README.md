@@ -7,7 +7,7 @@ a set of input patches and a set of prototypical patterns. These patterns can be
 either manually or automatedly via clustering. 
 
 > **Note**: The paper is published at Medical Image Analysis
-> and can be accessed at: [[arxiv]](https://arxiv.org/abs/2202.07001) [[MedIA]](https://www.sciencedirect.com/science/article/pii/S136184152300004X)]
+> and can be accessed at: [[arxiv]](https://arxiv.org/abs/2202.07001) [[MedIA]](https://www.sciencedirect.com/science/article/pii/S136184152300004X)
 
 ## Setup Environment
 
